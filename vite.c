@@ -350,7 +350,7 @@ void down_update_file_line(void){
                 }
                 } 
             }
-            printf("\033[%d;%dH", terminal_row_size-2, 0);
+            printf("\033[%d;%dH", terminal_row_size-2, cursor_x);
             down_status = 0;
         }
     #else
@@ -369,6 +369,9 @@ void down_update_file_line(void){
                 }
                 } 
             }
+            char buf[30];
+            sprintf(buf,"\033[%d;%dH", terminal_row_size-2, cursor_x);
+            write(STDOUT_FILENO, buf, strlen(buf));
             down_status = 0;
         }
     #endif
