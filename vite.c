@@ -1005,13 +1005,14 @@ void shortcut_key(void){
                 // sprintf(buf, "quit status : %d", quit_status);
                 // write(STDOUT_FILENO, buf, strlen(buf));
                 tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios_quit);
+                system("clear");
                 write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
-                for(int i = 0; i< terminal_row_size; ++i){
-                    char buf[30];
-                    sprintf(buf,"\033[%d;%dH", i, 0);
-                    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-                }
-                write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+                // for(int i = 0; i< terminal_row_size; ++i){
+                //     char buf[30];
+                //     sprintf(buf,"\033[%d;%dH", i, 0);
+                //     write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+                // }
+                // write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
                 exit(0);
             }else{
                 //print message bar
