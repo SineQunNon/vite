@@ -3,8 +3,8 @@
     #include <stdlib.h>
     #include <conio.h>
     #include <windows.h>
-    #include <string.h>
-    
+       
+    #include <string.h>    
     #define UP_ARROW 72
     #define DOWN_ARROW 80
     #define LEFT_ARROW 75
@@ -1069,10 +1069,10 @@ void draw_character_newfile(int c){
     #ifdef _WIN32
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
-        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-        row_info[cursor_y+cursor_y_out].len +=2;
+        row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
         cursor_x++;
     #else
@@ -1099,7 +1099,7 @@ int save_read_keypress(void){
             case ENTER: return ENTER;
             case BACK_SPACE: return BACK_SPACE;
             default:
-                return ESC;
+                return c;
         }
 
     #else
@@ -1206,13 +1206,18 @@ void save_file(void){
         char save_msgbar[300];
         char relocation[100];
 
-        sprintf(relocation,"\033[%dH", terminal_row_size);
-        write(STDOUT_FILENO, relocation, strlen(relocation));
-        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+        #ifdef _WIN32
+            printf("\033[%dH", terminal_row_size);
+            printf("\033[K");
+            printf("Saved Successfully");
+        #else
+            sprintf(relocation,"\033[%dH", terminal_row_size);
+            write(STDOUT_FILENO, relocation, strlen(relocation));
+            write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
 
-        sprintf(save_msgbar, "Saved Successfully");
-        write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
-
+            sprintf(save_msgbar, "Saved Successfully");
+            write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
+        #endif
 
         fclose(fp);
     }    
@@ -1220,6 +1225,20 @@ void save_file(void){
 
 int search_read_keypress(void){
     #ifdef _WIN32
+        int c;
+
+        c = getch();
+
+        switch(c){
+            case ESC:
+                return ESC;
+            case ENTER:
+                return ENTER;
+            case BACK_SPACE:
+                return BACK_SPACE;
+            default:
+                return c;
+        }
 
     #else
         char buf;
@@ -1243,7 +1262,11 @@ int search_read_keypress(void){
 
 void search_draw_msg_line(char * search_string, int len){
     #ifdef _WIN32
-
+        printf("\033[%dH", terminal_row_size);
+        printf("\033[K");
+        printf("Search(Enter to search / ESC to cancel) : %s",search_string);
+        printf("\033[%d;%dH", terminal_row_size, len+43);
+        printf("\033[K");
     #else
         char search_msgbar[300];
         char clear[100];
@@ -1301,7 +1324,31 @@ int KMP(const char * row, const char * pattern, int row_len, int pattern_len){
 void while_search_draw_line(int cur_row, int cur_col){
 
     #ifdef _WIN32
+        printf("\033[H");
+        
+        for(int terminal_line=0; terminal_line<terminal_row_size-2; ++terminal_line){
+            printf("\033[K");
+            // if(terminal_line == 0){
 
+            // }else 
+            
+            if(terminal_line+cur_row > file_row_length){
+                if(terminal_line < terminal_row_size - 1){
+                    printf("\n");
+                }else{
+                    printf("~");
+                }
+            }else{
+                if(row_info[terminal_line+cur_row].len > terminal_col_size) row_info[terminal_line+cur_row].len = terminal_col_size;
+                printf("%s",row_info[terminal_line + cur_row].row);
+
+                if(terminal_line < terminal_row_size - 3){
+                    printf("\n");
+                }
+                printf("\033[K");
+            }
+        }
+        printf("\033[%d;%dH", 0, cur_col+1);
     #else
         write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
@@ -1338,6 +1385,24 @@ void while_search_draw_line(int cur_row, int cur_col){
 int while_search_read_keypress(void){
 
     #ifdef _WIN32
+        int c;
+        int d;
+        c = getch();
+
+        switch(c){
+            case 224:
+                d = getch();      
+                switch(d){
+                    case UP_ARROW: return UP_ARROW;
+                    case DOWN_ARROW: return DOWN_ARROW;
+                    case RIGHT_ARROW: return RIGHT_ARROW;
+                    case LEFT_ARROW: return LEFT_ARROW;
+                    default:
+                        break;
+                }
+            default:
+                return ESC;
+        }
 
     #else
         // if(buf=='\033') return ESC;
@@ -1381,11 +1446,6 @@ int while_search_read_keypress(void){
 
 /*process Ctrl-f*/
 void search_process(void){
-    #ifdef _WIN32
-
-    #else
-    
-    #endif
     // write(STDOUT_FILENO, "INTO Ctrl+f\r\n", strlen("INTO Ctrl+f\r\n"));
     input_file_line();
     char *search_string=NULL;
@@ -1435,9 +1495,6 @@ void search_process(void){
                     break;
                 }
             }
-
-
-                      
             free(location);
 
         }else if(c==BACK_SPACE){
@@ -1487,12 +1544,24 @@ void shortcut_key(void){
                 }
                 break;
             case CTRL_Q:
+                if(quit_status==0||quit_status==2){
                     system(CLEAR);
+                    printf("\033[H");
                     exit(0);
+                }else if(quit_status == 1){
+                    //print message bar
+                    // sprintf(clear, "\033[%dK", terminal_row_size);
+                    printf("\033[%d;%dH", terminal_row_size, 0);
+                    printf("\033[K");
+                    printf("Force quit : Press Ctrl-f 1 more");
+                    quit_status++;
+                }
+                break;
             case CTRL_S:
                 save_file();
                 break;
             case CTRL_F:
+                search_process();
                 break;
             case BACK_SPACE:
                 backspace_process();
@@ -1523,7 +1592,7 @@ void shortcut_key(void){
                     // sprintf(buf, "quit status : %d", quit_status);
                     // write(STDOUT_FILENO, buf, strlen(buf));
                     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios_quit);
-                    system("clear");
+                    system(CLEAR);
                     write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
                     // for(int i = 0; i< terminal_row_size; ++i){
                     //     char buf[30];
@@ -1605,8 +1674,6 @@ int main(int argc, char *argv[]){
 
         terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
         terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
-        
-        
 
         row_info=NULL;
         if(argc >=2){
@@ -1724,4 +1791,5 @@ int main(int argc, char *argv[]){
     #endif
     
     return 0;
+
 
