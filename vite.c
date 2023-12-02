@@ -4,19 +4,21 @@
     #include <conio.h>
     #include <windows.h>
     #include <string.h>
-
-    #define CTRL_KEY(k) ((k)& 0x1f)
-    #define UP_ARROW 1111
-    #define DOWN_ARROW 2222
-    #define LEFT_ARROW 3333
-    #define RIGHT_ARROW 4444
-    #define HOME 5555
-    #define END 6666
-    #define PAGE_UP 7777
-    #define PAGE_DOWN 8888
-    #define BACK_SPACE 127
-    #define ENTER '\r'
+    
+    #define UP_ARROW 22472
+    #define DOWN_ARROW 22480
+    #define LEFT_ARROW 22475
+    #define RIGHT_ARROW 22477
+    #define HOME 22471
+    #define END 22479
+    #define PAGE_UP 22473
+    #define PAGE_DOWN 22481
+    #define BACK_SPACE 8
+    #define ENTER 13
     #define ESC 27
+    #define CTRL_S 19
+    #define CTRL_F 6
+    #define CTRL_Q 17
     #define CLEAR "cls"
 #else
     #include <stdio.h>
@@ -123,10 +125,38 @@ struct file_row_info *row_info;
             return 0;
         }
     }
+#endif
 
-    void draw_msg_line(int terminal_line){
-        
-        if(terminal_line == terminal_row_size - 2){
+void draw_msg_line(int terminal_line){
+    #ifdef _WIN32
+        if(terminal_line == terminal_row_size -2){
+            char cursor_status[101];
+            sprintf(cursor_status, "no ft | %ld/%ld", cursor_x + 1, cursor_y + cursor_y_out + 1);
+            msg_bar1 = (char*)malloc(terminal_col_size * (sizeof(char)));
+            if(filename==NULL){
+                sprintf(msg_bar1, "\n\x1B[7m[No Name] - %d lines", file_row_length);
+            }else{
+                sprintf(msg_bar1, "\x1B[7m[%s] - %d lines",filename, file_row_length);
+            }
+            int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status)+4;         
+
+            char * back_msg_bar1 =malloc(sizeof(char));
+            for(int idx =0; idx <=empty_space; ++idx){
+                back_msg_bar1 = realloc(back_msg_bar1, sizeof(char)* (idx+1));
+                back_msg_bar1[idx] = ' ';
+            }
+            
+            printf("%s", msg_bar1);
+            printf("%s", back_msg_bar1);
+            printf("%s", cursor_status);
+            printf("\n");
+        }else{
+            msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
+            sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
+            printf("%s", msg_bar2);
+        }
+    #else
+         if(terminal_line == terminal_row_size - 2){
             char cursor_status[101];
             sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y + cursor_y_out + 1);
             msg_bar1 = (char *)malloc(terminal_col_size * sizeof(char));
@@ -156,14 +186,32 @@ struct file_row_info *row_info;
             sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
             write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
         }
-    }
-#endif
-
+    #endif
+}
+        
+       
 
 /*initialize - no argument*/
-void open_new_terminal(){
+void open_new_terminal(void){
     #ifdef _WIN32
+        for(int terminal_line=0; terminal_line<terminal_row_size;++terminal_line){
+            if(terminal_line == terminal_row_size-1 || terminal_line == terminal_row_size-2){
 
+            }else if(terminal_line < terminal_row_size -3){
+                if(terminal_line == terminal_row_size / 3){
+                    printf("~");
+
+                    for(int i=0; i < terminal_col_size / 3; ++i){
+                        printf(" ");
+                    }
+                    printf("Viusal Text Editor -- version 0.0.1\n");
+                }else{
+                    printf("~\n");
+                }
+            }else{
+                printf("~");
+            }    
+        }
     #else
         int terminal_line = 0;
 
@@ -217,7 +265,29 @@ void open_new_terminal(){
 /* drawing file initial screen */
 void draw_file_line(void){ // 0 ~
     #ifdef _WIN32
+        for (int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line) {
+            if (terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size - 1) {
+                //draw_msg_line(terminal_line);
+            } else if (terminal_line > file_row_length) {
+                if (terminal_line < terminal_row_size - 1) {
+                    printf("~\n");
+                } else {
+                    printf("~");
+                }
+            } else {
+                if (row_info[terminal_line].len > terminal_col_size) {
+                    row_info[terminal_line].len = terminal_col_size;
+                }
 
+                printf("%s", row_info[terminal_line].row);
+
+                if (terminal_line < terminal_row_size - 1) {
+                    printf("\n");
+                }
+                
+            }
+        }
+        printf("\033[H");
     #else
         for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
             // if(terminal_line == terminal_row_size-1){
@@ -316,6 +386,7 @@ void up_update_file_line(){
 }
 
 char* tabs_to_spaces(char * line, int length){
+    
     char * modified_line = malloc(length * 4);
 
     int pos = 0;
@@ -335,53 +406,100 @@ char* tabs_to_spaces(char * line, int length){
 
 
 void open_file(const char * filename){
-    char * line = NULL;
-    size_t len = 0;
+    
     #ifdef _WIN32
+        char * line = NULL;
         int read;
+        int len = 0;
+
+        FILE * fp = fopen(filename, "rt");
+        if(fp == NULL){
+            perror("error : failed to open file");
+            exit(1);
+        }
+
+        file_row_length=0;
+    
+        while((read = getline(&line, &len, fp)) != -1){
+            /* Change tabs to 4 spaces*/
+            char * modified_line = tabs_to_spaces(line, read);
+            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+
+            row_info[file_row_length].row = modified_line;
+            row_info[file_row_length].len = strlen(modified_line);
+            row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
+            
+            file_row_length++;
+        }
+        fclose(fp);
+
+        // char *line=NULL;
+        // size_t len = 0;
+        // FILE *fp = fopen(filename, "rt");
+        // if (fp == NULL) {
+        //     perror("error : failed to open file");
+        //     exit(1);
+        // }
+
+        // while () {
+        //     /* Change tabs to 4 spaces*/
+        //     char *modified_line = tabs_to_spaces(line, strlen(line));
+        //     row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info) * (file_row_length + 1));
+
+        //     row_info[file_row_length].row = modified_line;
+        //     row_info[file_row_length].len = strlen(modified_line);
+        //     row_info[file_row_length].row[row_info[file_row_length].len - 1] = '\0';
+
+        //     file_row_length++;
+        // }
+        // fclose(fp);
     #else
+        char * line = NULL;
+        size_t len = 0;
         ssize_t read;
+        FILE * fp = fopen(filename, "rt");
+        if(fp == NULL){
+            perror("error : failed to open file");
+            exit(1);
+        }
+
+        file_row_length=0;
+        
+        while((read = getline(&line, &len, fp)) != -1){
+            /* Change tabs to 4 spaces*/
+            char * modified_line = tabs_to_spaces(line, read);
+            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+
+            row_info[file_row_length].row = modified_line;
+            row_info[file_row_length].len = strlen(modified_line);
+            row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
+            // row_info[file_row_length].row[row_info[file_row_length].len+1] = '\r';
+            // row_info[file_row_length]->len = strlen(line);
+            // char * p;
+            // sprintf(p, "read : %d || len : %d ", read, len);
+            // write(STDOUT_FILENO, p, strlen(p));
+            // write(STDOUT_FILENO, line, read);
+            // write(STDOUT_FILENO, "\r", 2);
+            // write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+            file_row_length++;
+        }
+
+        // for(int i=0; i<5; ++i){
+        //     char buf[50];
+        //     sprintf(buf, "%d line : %d\r\n", i+1, file_col_length[i]);
+        //     write(STDOUT_FILENO, buf, strlen(buf));
+        // }
+        
+        fclose(fp);
     #endif
 
-    FILE * fp = fopen(filename, "r");
-    if(fp == NULL){
-        perror("error : failed to open file");
-        exit(1);
-    }
-
-    file_row_length=0;
     
-    while((read = getline(&line, &len, fp)) != -1){
-        /* Change tabs to 4 spaces*/
-        char * modified_line = tabs_to_spaces(line, read);
-
-        row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
-
-        row_info[file_row_length].row = modified_line;
-        row_info[file_row_length].len = strlen(modified_line);
-        row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
-        // row_info[file_row_length].row[row_info[file_row_length].len+1] = '\r';
-        // row_info[file_row_length]->len = strlen(line);
-        // char * p;
-        // sprintf(p, "read : %d || len : %d ", read, len);
-        // write(STDOUT_FILENO, p, strlen(p));
-        // write(STDOUT_FILENO, line, read);
-        // write(STDOUT_FILENO, "\r", 2);
-        // write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-        file_row_length++;
-    }
-
-    // for(int i=0; i<5; ++i){
-    //     char buf[50];
-    //     sprintf(buf, "%d line : %d\r\n", i+1, file_col_length[i]);
-    //     write(STDOUT_FILENO, buf, strlen(buf));
-    // }
-    fclose(fp);
 }
 
 
 int read_keypress(void){
     #ifdef _WIN32
+        char buf[4];
 
     #else
         char buf[4];
@@ -1131,7 +1249,31 @@ void search_process(void){
 
 void shortcut_key(void){
     #ifdef _WIN32
+        int c;
 
+        // c = read_keypress();
+        c = getch();
+        // printf("%d", c);
+        switch(c){
+            case CTRL_Q:
+                system(CLEAR);
+                exit(0);
+            case UP_ARROW:
+            case DOWN_ARROW:
+            case RIGHT_ARROW:
+            case LEFT_ARROW:
+            case HOME:
+            case END:
+            case PAGE_UP:   
+            case PAGE_DOWN:
+                break;
+            case CTRL_S:
+                break;
+            case CTRL_F:
+                break;
+            default:
+                break;
+        }
     #else
          int c;
         c = read_keypress();
@@ -1211,40 +1353,41 @@ void shortcut_key(void){
 int main(int argc, char *argv[]){
     system(CLEAR);
     #ifdef _WIN32
-        HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
-        DWORD consoleMode;
-        
-        if (!GetConsoleMode(hConsole, &consoleMode)) {
-            fprintf(stderr, "Failed to get console mode. Error code: %lu\n", GetLastError());
-            return 1;
-        }
-
-        // Disable input processing (similar to ICANON and IXON)
-        if (!SetConsoleMode(hConsole, consoleMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT))) {
-            fprintf(stderr, "Failed to set console mode. Error code: %lu\n", GetLastError());
-            return 1;
-        }
-
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
-        if (GetConsoleScreenBufferInfo(hConsole, &csbiInfo)) {
-            int terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
-            int terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
-            printf("row size : %d, col size : %d", terminal_row_size, terminal_col_size);
-        } else {
+
+        if (!GetConsoleScreenBufferInfo(hConsole, &csbiInfo)) {
             fprintf(stderr, "Failed to get console screen buffer info. Error code: %lu\n", GetLastError());
             return 1;
         }
+
+        terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
+        terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
+        
+        
         if(argc >=2){
             filename = argv[1];
-            open_file(argv[1]);
-        }else{
            
+              
+            open_file(argv[1]);
+            //draw_file_line();
+            for(int i =0; i<terminal_row_size; ++i){
+                printf("%s %d\n", row_info[i].row, row_info[i].len);
+            }
+           
+        }else{
+            open_new_terminal();
+            draw_msg_line(terminal_row_size-2);
+            draw_msg_line(terminal_row_size-1);
+            while(1){
+                shortcut_key();
+            }
         }
     #else
         /*chage terminal setting*/
     tcgetattr(STDIN_FILENO, &orig_termios);
     tcgetattr(STDIN_FILENO, &orig_termios_quit);
-    struct termios set = orig_termios;s
+    struct termios set = orig_termios;
     /*
     ICANON: Whenever the user presses a key, that keystroke is processed immediately.
     IXON: Ctrl-S is read as 19 bytes and Ctrl-Q is read as 17 bytes.

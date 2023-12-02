@@ -3,4 +3,5 @@
 Makefile
 .vscode
 *.c
+*.txt
 !vite.c
