@@ -1807,10 +1807,10 @@ int main(int argc, char *argv[]){
 
 
     if (get_window_size(&terminal_row_size, &terminal_col_size) != 0) exit(1); 
-
-    // char buf[150];
-    // sprintf(buf, "termianl_col_size : %d\r\nterminal_row_size : %d", terminal_col_size, terminal_row_size);
-    // write(STDOUT_FILENO, buf, strlen(buf));
+    
+    char buf[150];
+    sprintf(buf, "termianl_col_size : %d\r\nterminal_row_size : %d", terminal_col_size, terminal_row_size);
+    write(STDOUT_FILENO, buf, strlen(buf));
     row_info = NULL;
 
     if(argc >= 2){
