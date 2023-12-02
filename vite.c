@@ -38,11 +38,16 @@
     #define PAGE_UP 7777
     #define PAGE_DOWN 8888
     #define BACK_SPACE 127
-    #define ENTER '\r'
     #define ESC 27
     #define CLEAR "clear"
     struct termios orig_termios; //terminal setting
     struct termios orig_termios_quit; //terminal re-setting
+#endif
+
+#ifdef __APPLE__
+    #define ENTER '\r'
+#elif __linux__
+    #define ENTER 13
 #endif
 
 int cursor_x; //location of terminal x-coordinate
