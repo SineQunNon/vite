@@ -1,16 +1,3 @@
-#ifdef _WIN32
-    // Windows 플랫폼에서 실행되는 코드
-    #include <windows.h>
-#elif __linux__
-    // Linux 플랫폼에서 실행되는 코드
-    #define ESC 8
-#elif __APPLE__
-    // macOS 플랫폼에서 실행되는 코드
-    #define ESC 27
-#else
-    #error "Unsupported platform"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -30,6 +17,7 @@
 #define PAGE_DOWN 8888
 #define BACK_SPACE 127
 #define ENTER '\r'
+#define ESC 27
 
 int cursor_x; //location of terminal x-coordinate
 int cursor_y; //location of terminal y-coordinate
@@ -1025,7 +1013,7 @@ void shortcut_key(void){
                 // }
                 // write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
                 exit(0);
-            }else{
+            }else if(quit_status == 1){
                 //print message bar
                 char quit_msgbar[300];
                 char buf[30];
