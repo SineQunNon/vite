@@ -869,7 +869,28 @@ void move_cursor(int keypress, char * filename){
 /* Screen updates when input something */
 void input_file_line(void){
     #ifdef _WIN32
+        printf("\033[H");
 
+        for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            if(terminal_line == terminal_row_size -2 || terminal_line == terminal_row_size -1){
+                draw_msg_line(terminal_line);
+            }else if(terminal_line > file_row_length){
+                if(terminal_line < terminal_row_size - 1){
+                    printf("~\n");
+                }else{
+                    printf("~");
+                }
+            }else{
+                if(row_info[terminal_line+cursor_y_out].len > terminal_col_size) row_info[terminal_line+cursor_y_out].len = terminal_col_size;
+                printf("%s",row_info[terminal_line+cursor_y_out].row);
+                
+                // write(STDOUT_FILENO, buf, strlen(buf));
+                if(terminal_line < terminal_row_size - 1){
+                    printf("\n");
+                }
+                printf("\033[K");
+            }
+        }
     #else
         write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
@@ -899,11 +920,6 @@ void input_file_line(void){
 
 /*Process backspace*/
 void backspace_process(void){
-    #ifdef _WIN32
-
-    #else
-    
-    #endif
     if(cursor_x >0){
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x-1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - 1);
         row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len-1);
@@ -941,19 +957,13 @@ void backspace_process(void){
                 cursor_x = terminal_col_size;
             }
         }
-        
-
+    
     }
 }
 
 
 /* Enter key process */
 void enter_process(void){
-    #ifdef _WIN32
-
-    #else
-    
-    #endif
     row_info = realloc(row_info, sizeof(file_row_info)*file_row_length + sizeof(file_row_info));
     
     /*allocate new line*/
@@ -1029,7 +1039,12 @@ void enter_process(void){
 /*input character given arguments*/
 void draw_character(int c){
     #ifdef _WIN32
-
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
+        row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
+        row_info[cursor_y+cursor_y_out].len +=1;
+        input_file_line();
+        cursor_x++;
     #else
         row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
@@ -1044,7 +1059,14 @@ void draw_character(int c){
 /*input charater given no arguments*/
 void draw_character_newfile(int c){
     #ifdef _WIN32
+        row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
+        row_info[cursor_y+cursor_y_out].len +=2;
+        input_file_line();
+        cursor_x++;
     #else
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
@@ -1061,6 +1083,17 @@ void draw_character_newfile(int c){
 int save_read_keypress(void){
 
     #ifdef _WIN32
+        int c;
+
+        c= getch();
+
+        switch(c){
+            case ESC: return ESC;
+            case ENTER: return ENTER;
+            case BACK_SPACE: return BACK_SPACE;
+            default:
+                return ESC;
+        }
 
     #else
         char buf;
@@ -1116,7 +1149,7 @@ void save_file(void){
             if(c==ESC){
                 input_file_line();
                 break;
-            }else if(c=='\r'){
+            }else if(c==ENTER){
                 if(save_string!=NULL){
                     filename = save_string;
                     save_file();
@@ -1404,8 +1437,10 @@ void shortcut_key(void){
         int c;
         int d;
         // c = read_keypress();
+        
         c = getch();
-
+        
+        //printf("%d", c);
         switch(c){
             case 224:
                 d = getch();      
@@ -1420,7 +1455,6 @@ void shortcut_key(void){
                     case PAGE_DOWN:
                         move_cursor(d, filename);
                         break;
-
                     default:
                         break;
                 }
@@ -1429,18 +1463,35 @@ void shortcut_key(void){
                     system(CLEAR);
                     exit(0);
             case CTRL_S:
+                save_file();
                 break;
             case CTRL_F:
                 break;
-            default:
+            case BACK_SPACE:
+                backspace_process();
+                quit_status=1;
                 break;
+            case ENTER:
+                enter_process();
+                quit_status=1;
+                break;
+            default:
+                if(filename){
+                    draw_character(c);
+                    quit_status=1;
+                }else{
+                    draw_character_newfile(c);
+                    quit_status=1;
+                }
+               break;
         }
     #else
          int c;
         c = read_keypress();
 
         switch(c){
-            case CTRL_KEY('q'):
+            case CTRL_KEY('q'):mode &= ~ENABLE_LINE_INPUT;
+        mode &= ~ENABLE_ECHO_INPUT;
                 if(quit_status==0||quit_status==2){
                     // char buf[30];
                     // sprintf(buf, "quit status : %d", quit_status);
@@ -1516,6 +1567,10 @@ int main(int argc, char *argv[]){
     #ifdef _WIN32
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+        DWORD mode;
+
+
+        mode &= ~ENABLE_ECHO_INPUT;
 
         if (!GetConsoleScreenBufferInfo(hConsole, &csbiInfo)) {
             fprintf(stderr, "Failed to get console screen buffer info. Error code: %lu\n", GetLastError());
@@ -1525,6 +1580,8 @@ int main(int argc, char *argv[]){
         terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
         terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
         
+        
+
         row_info=NULL;
         if(argc >=2){
             filename = argv[1];
@@ -1552,11 +1609,19 @@ int main(int argc, char *argv[]){
            free(row_info);
         }else{
             open_new_terminal();
+            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+            file_row_length++;
+            row_info[0].row = NULL;
+            row_info[0].len = 0;
             draw_msg_line(terminal_row_size-2);
             draw_msg_line(terminal_row_size-1);
             printf("\033[%d;%dH", 1, 1);
             while(1){
                 shortcut_key();
+
+                printf("\033[%d;%dH", terminal_row_size-1, 0);
+                draw_msg_line(terminal_row_size-2);
+                printf("\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             }
         }
     #else
@@ -1585,7 +1650,7 @@ int main(int argc, char *argv[]){
     row_info = NULL;
 
     if(argc >= 2){
-        // open_new_terminal();
+        // open_new_terminal();ㅠ
         filename = argv[1];
         open_file(argv[1]);
 
