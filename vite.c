@@ -1861,7 +1861,7 @@ int main(int argc, char *argv[]){
 
             //update message bar
             char buf[32];
-            sprintf(buf,"\033[%d:%dH", terminal_row_size-1,cursor_x);
+            sprintf(buf,"\033[%d;%dH", terminal_row_size-1,cursor_x);
             write(STDOUT_FILENO, buf, strlen(buf));
             draw_msg_line(terminal_row_size-2);
             // // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
