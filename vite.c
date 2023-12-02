@@ -1490,8 +1490,7 @@ void shortcut_key(void){
         c = read_keypress();
 
         switch(c){
-            case CTRL_KEY('q'):mode &= ~ENABLE_LINE_INPUT;
-        mode &= ~ENABLE_ECHO_INPUT;
+            case CTRL_KEY('q'):
                 if(quit_status==0||quit_status==2){
                     // char buf[30];
                     // sprintf(buf, "quit status : %d", quit_status);
