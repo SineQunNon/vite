@@ -157,7 +157,7 @@ void   draw_msg_line(int terminal_line){
             sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
             printf("%s", msg_bar2);
         }
-    #elif APPLE
+    #elif __APPLE__
          if(terminal_line == terminal_row_size - 2){
             char cursor_status[101];
             sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y + cursor_y_out + 1);
@@ -1861,10 +1861,10 @@ int main(int argc, char *argv[]){
 
             //update message bar
             char buf[32];
-            sprintf(buf,"\033[%d;%dH", terminal_row_size-1,cursor_x);
+            sprintf(buf,"\033[%d;%dH", terminal_row_size-1, 0);
             write(STDOUT_FILENO, buf, strlen(buf));
             draw_msg_line(terminal_row_size-2);
-            // // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
+            // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
             sprintf(buf,"\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             write(STDOUT_FILENO, buf, strlen(buf));
         }
