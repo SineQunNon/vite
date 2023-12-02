@@ -1,23 +1,46 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/ioctl.h>
+#ifdef _WIN32
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <conio.h>
+    #include <windows.h>
+    #include <string.h>
 
-#define CTRL_KEY(k) ((k)& 0x1f)
+    #define CTRL_KEY(k) ((k)& 0x1f)
 
-#define UP_ARROW 1111
-#define DOWN_ARROW 2222
-#define LEFT_ARROW 3333
-#define RIGHT_ARROW 4444
-#define HOME 5555
-#define END 6666
-#define PAGE_UP 7777
-#define PAGE_DOWN 8888
-#define BACK_SPACE 127
-#define ENTER '\r'
-#define ESC 27
+    #define UP_ARROW 1111
+    #define DOWN_ARROW 2222
+    #define LEFT_ARROW 3333
+    #define RIGHT_ARROW 4444
+    #define HOME 5555
+    #define END 6666
+    #define PAGE_UP 7777
+    #define PAGE_DOWN 8888
+    #define BACK_SPACE 127
+    #define ENTER '\r'
+    #define ESC 27
+    #define CLEAR "cls"
+#else
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <termios.h>
+    #include <unistd.h>
+    #include <string.h>
+    #include <sys/ioctl.h>
+    #define CTRL_KEY(k) ((k)& 0x1f)
+
+    #define UP_ARROW 1111
+    #define DOWN_ARROW 2222
+    #define LEFT_ARROW 3333
+    #define RIGHT_ARROW 4444
+    #define HOME 5555
+    #define END 6666
+    #define PAGE_UP 7777
+    #define PAGE_DOWN 8888
+    #define BACK_SPACE 127
+    #define ENTER '\r'
+    #define ESC 27
+    #define CLEAR "clear"
+#endif
 
 int cursor_x; //location of terminal x-coordinate
 int cursor_y; //location of terminal y-coordinate
@@ -1068,7 +1091,7 @@ void shortcut_key(void){
 
 
 int main(int argc, char *argv[]){
-    system("clear");
+    system(CLEAR);
 
     /*chage terminal setting*/
     tcgetattr(STDIN_FILENO, &orig_termios);
