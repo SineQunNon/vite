@@ -961,11 +961,18 @@ void backspace_process(void){
     }
 }
 
+#ifdef _WIN32
+    char * enter_initialize_row(void){
+        char * buf = (char*)malloc(sizeof(char)*1);
+
+        return buf;
+    }
+#endif
 
 /* Enter key process */
 void enter_process(void){
     row_info = realloc(row_info, sizeof(file_row_info)*file_row_length + sizeof(file_row_info));
-    
+
     /*allocate new line*/
     if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){
         char * buf = (char*)malloc(sizeof(char)*1);
@@ -1034,6 +1041,7 @@ void enter_process(void){
         cursor_x = 0;
         cursor_y++;
     }
+
 }
 
 /*input character given arguments*/
@@ -1081,7 +1089,6 @@ void draw_character_newfile(int c){
 }
 
 int save_read_keypress(void){
-
     #ifdef _WIN32
         int c;
 
@@ -1117,7 +1124,15 @@ int save_read_keypress(void){
 
 void save_draw_msg_line(char * save_string, int len){
     #ifdef _WIN32
+        char save_msgbar[300];
+        char clear[100];
+        char relocation[100];
 
+        printf("\033[%dH", terminal_row_size);
+        printf("\033[K");
+        printf("file name : %s", save_string);
+        printf("\033[%d;%dH", terminal_row_size, len+13);
+        printf("\033[K");
     #else
         char save_msgbar[300];
         char clear[100];
