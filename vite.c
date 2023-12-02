@@ -130,7 +130,7 @@ struct file_row_info *row_info;
     }
 #endif
 
-void   draw_msg_line(int terminal_line){
+void draw_msg_line(int terminal_line){
     #ifdef _WIN32
         if(terminal_line == terminal_row_size -2){
             char cursor_status[101];
@@ -202,7 +202,8 @@ void   draw_msg_line(int terminal_line){
 
                 int empty_space = 0;
                 if(filename == NULL){
-
+                    sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
+                    empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status);
                 }else{
                     sprintf(msg_bar1,"\x1B[7m[%s] - %d lines",filename, file_row_length);
                     empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
