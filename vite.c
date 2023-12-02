@@ -595,7 +595,23 @@ int read_keypress(void){
 
 void page_down_draw_line(){
     #ifdef _WIN32
-
+        if(page_down_status == 1){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out;
+                    printf("\033[K");
+                    
+                    if(row_info[cur_line].len > terminal_col_size) row_info[cur_line].len = terminal_col_size;
+                    printf("%s",row_info[cur_line].row);
+                    if(terminal_line < terminal_row_size-1){
+                        printf("\n");
+                }
+                } 
+            }
+            page_down_status = 0;
+        }
     #else
         if(page_down_status == 1){
             for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
@@ -619,7 +635,22 @@ void page_down_draw_line(){
 
 void page_up_draw_line(){
     #ifdef _WIN32
-
+        if(page_up_status == 1){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out;
+                    printf("\033[K");
+                    if(row_info[cur_line].len > terminal_col_size) row_info[cur_line].len = terminal_col_size;
+                    printf("%s",row_info[cur_line].row);
+                    if(terminal_line < terminal_row_size-1){
+                        printf("\n");
+                }
+                } 
+            }
+            page_up_status = 0;
+        }
     #else
     if(page_up_status == 1){
         for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
@@ -715,7 +746,7 @@ void move_cursor(int keypress, char * filename){
                     cursor_y_out = 0;
                 }
                 page_up_status = 1;
-                //page_up_draw_line();
+                page_up_draw_line();
             }
         }
             
@@ -729,7 +760,7 @@ void move_cursor(int keypress, char * filename){
                     cursor_y_out = file_row_length - terminal_row_size+2;
                 }
                 page_down_status = 1;
-                //page_down_draw_line();
+                page_down_draw_line();
             }
         }
 
@@ -1511,8 +1542,9 @@ int main(int argc, char *argv[]){
                 up_update_file_line();
                 shortcut_key();
 
-                
-
+                printf("\033[%d;%dH", terminal_row_size-1, 0);
+                draw_msg_line(terminal_row_size-2);
+                printf("\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             }
             
             //printf("%d", file_row_length);
