@@ -203,7 +203,7 @@ void draw_msg_line(int terminal_line){
                 int empty_space = 0;
                 if(filename == NULL){
                     sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
-                    empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status);
+                    empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status)+4;
                 }else{
                     sprintf(msg_bar1,"\x1B[7m[%s] - %d lines",filename, file_row_length);
                     empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
