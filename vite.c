@@ -1202,6 +1202,18 @@ void save_file(void){
             fputs(row_info[line].row, fp);
         }
         quit_status=0;
+
+        char save_msgbar[300];
+        char relocation[100];
+
+        sprintf(relocation,"\033[%dH", terminal_row_size);
+        write(STDOUT_FILENO, relocation, strlen(relocation));
+        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+
+        sprintf(save_msgbar, "Saved Successfully");
+        write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
+
+
         fclose(fp);
     }    
 }
@@ -1712,4 +1724,4 @@ int main(int argc, char *argv[]){
     #endif
     
     return 0;
-}
+
