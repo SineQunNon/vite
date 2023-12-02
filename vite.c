@@ -1,3 +1,16 @@
+#ifdef _WIN32
+    // Windows 플랫폼에서 실행되는 코드
+    #include <windows.h>
+#elif __linux__
+    // Linux 플랫폼에서 실행되는 코드
+    #define ESC 8
+#elif __APPLE__
+    // macOS 플랫폼에서 실행되는 코드
+    #define ESC 27
+#else
+    #error "Unsupported platform"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -17,7 +30,6 @@
 #define PAGE_DOWN 8888
 #define BACK_SPACE 127
 #define ENTER '\r'
-#define ESC 27
 
 int cursor_x; //location of terminal x-coordinate
 int cursor_y; //location of terminal y-coordinate
@@ -119,7 +131,6 @@ void draw_msg_line(int terminal_line){
         // write(STDOUT_FILENO,"\x1B[0m", strlen("\x1B[0m"));
         write(STDOUT_FILENO, msg_bar1, terminal_col_size);
         // write(STDOUT_FILENO, buf, strlen(buf));
-
         write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
         write(STDOUT_FILENO, cursor_status, strlen(cursor_status));
         write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
