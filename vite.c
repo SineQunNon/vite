@@ -77,8 +77,6 @@ typedef struct search_info{
 
 struct file_row_info *row_info;
 
-
-
 #ifdef _WIN32
     
 #else
@@ -404,14 +402,34 @@ char* tabs_to_spaces(char * line, int length){
     return modified_line;
 }
 
+#ifdef _WIN32
+    char* initialize_row(char *line, int read) {
+    char *new_line = malloc(sizeof(char) * (read + 1)); // Allocate enough space
+
+    int pos = 0;
+
+    for (int i = 0; i < read; ++i) {
+        if (line[i] == '\t') {
+            for (int j = 0; j < 4; ++j) { // Change tabs to 4 spaces
+                new_line[pos++] = ' ';
+            }
+        } else {
+            new_line[pos++] = line[i];
+        }
+    }
+
+    new_line[pos] = '\0'; // Null-terminate the string
+
+    return new_line;
+}
+#endif
 
 void open_file(const char * filename){
     
     #ifdef _WIN32
         char * line = NULL;
+        size_t len = 0;
         int read;
-        int len = 0;
-
         FILE * fp = fopen(filename, "rt");
         if(fp == NULL){
             perror("error : failed to open file");
@@ -419,40 +437,16 @@ void open_file(const char * filename){
         }
 
         file_row_length=0;
-    
-        while((read = getline(&line, &len, fp)) != -1){
-            /* Change tabs to 4 spaces*/
-            char * modified_line = tabs_to_spaces(line, read);
-            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
-
-            row_info[file_row_length].row = modified_line;
-            row_info[file_row_length].len = strlen(modified_line);
-            row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
-            
+        
+        while ((read = getline(&line, &len, fp)) != -1) {
+            // Change tabs to 4 spaces and store in row_info
+            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info) * (file_row_length + 1));
+            row_info[file_row_length].row = initialize_row(line, read);
+            row_info[file_row_length].len = strlen(row_info[file_row_length].row);
             file_row_length++;
         }
+
         fclose(fp);
-
-        // char *line=NULL;
-        // size_t len = 0;
-        // FILE *fp = fopen(filename, "rt");
-        // if (fp == NULL) {
-        //     perror("error : failed to open file");
-        //     exit(1);
-        // }
-
-        // while () {
-        //     /* Change tabs to 4 spaces*/
-        //     char *modified_line = tabs_to_spaces(line, strlen(line));
-        //     row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info) * (file_row_length + 1));
-
-        //     row_info[file_row_length].row = modified_line;
-        //     row_info[file_row_length].len = strlen(modified_line);
-        //     row_info[file_row_length].row[row_info[file_row_length].len - 1] = '\0';
-
-        //     file_row_length++;
-        // }
-        // fclose(fp);
     #else
         char * line = NULL;
         size_t len = 0;
@@ -467,8 +461,9 @@ void open_file(const char * filename){
         
         while((read = getline(&line, &len, fp)) != -1){
             /* Change tabs to 4 spaces*/
-            char * modified_line = tabs_to_spaces(line, read);
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+            char * modified_line = tabs_to_spaces(line, read);
+            
 
             row_info[file_row_length].row = modified_line;
             row_info[file_row_length].len = strlen(modified_line);
@@ -1364,17 +1359,21 @@ int main(int argc, char *argv[]){
         terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
         terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
         
-        
+        row_info=NULL;
         if(argc >=2){
             filename = argv[1];
            
               
             open_file(argv[1]);
             //draw_file_line();
-            for(int i =0; i<terminal_row_size; ++i){
-                printf("%s %d\n", row_info[i].row, row_info[i].len);
+
+            for(int i=0; i<terminal_row_size; ++i){
+                printf("%s", row_info[i].row);
             }
-           
+            
+            //printf("%d", file_row_length);
+
+           free(row_info);
         }else{
             open_new_terminal();
             draw_msg_line(terminal_row_size-2);
