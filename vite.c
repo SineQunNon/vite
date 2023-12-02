@@ -6,7 +6,6 @@
     #include <string.h>
 
     #define CTRL_KEY(k) ((k)& 0x1f)
-
     #define UP_ARROW 1111
     #define DOWN_ARROW 2222
     #define LEFT_ARROW 3333
@@ -40,6 +39,8 @@
     #define ENTER '\r'
     #define ESC 27
     #define CLEAR "clear"
+    struct termios orig_termios; //terminal setting
+    struct termios orig_termios_quit; //terminal re-setting
 #endif
 
 int cursor_x; //location of terminal x-coordinate
@@ -72,227 +73,254 @@ typedef struct search_info{
     int col_location;
 }search_info;
 
-struct termios orig_termios; //terminal setting
-struct termios orig_termios_quit; //terminal re-setting
 struct file_row_info *row_info;
 
-/* get terminal size */
-int get_cursor_position(int *rows, int *cols) {
-    char buf[32];
-    unsigned int i = 0;
 
-    if (write(STDOUT_FILENO, "\033[6n", 4) != 4) {
-        return -1;
-    }
 
-    while (i < sizeof(buf) - 1) {
-        if (read(STDIN_FILENO, &buf[i], 1) != 1) {
-            break;
-        }
-        if (buf[i] == 'R') {
-            break;
-        }
-        i++;
-    }
-    buf[i] = '\0';
+#ifdef _WIN32
+    
+#else
+    /* get terminal size */
+    int get_cursor_position(int *rows, int *cols) {
+        char buf[32];
+        unsigned int i = 0;
 
-    if (buf[0] != '\033' || buf[1] != '[') {
-        return -1;
-    }
-    if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) {
-        return -1;
-    }
-
-    return 0;
-}
-
-int get_window_size(int *rows, int *cols) {
-    struct winsize ws;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-        if (write(STDOUT_FILENO, "\033[999C\033[999B", 12) != 12) {
+        if (write(STDOUT_FILENO, "\033[6n", 4) != 4) {
             return -1;
         }
-        return get_cursor_position(rows, cols);
-    } else {
-        *cols = ws.ws_col;
-        *rows = ws.ws_row;
+
+        while (i < sizeof(buf) - 1) {
+            if (read(STDIN_FILENO, &buf[i], 1) != 1) {
+                break;
+            }
+            if (buf[i] == 'R') {
+                break;
+            }
+            i++;
+        }
+        buf[i] = '\0';
+
+        if (buf[0] != '\033' || buf[1] != '[') {
+            return -1;
+        }
+        if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) {
+            return -1;
+        }
+
         return 0;
     }
-}
 
-void draw_msg_line(int terminal_line){
-    if(terminal_line == terminal_row_size - 2){
-        char cursor_status[101];
-        sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y + cursor_y_out + 1);
-        msg_bar1 = (char *)malloc(terminal_col_size * sizeof(char));
-        if(filename == NULL){
-            sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
-        }else{
-            sprintf(msg_bar1, "\x1B[7m[%s] - %d lines",filename, file_row_length);
+    int get_window_size(int *rows, int *cols) {
+        struct winsize ws;
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+            if (write(STDOUT_FILENO, "\033[999C\033[999B", 12) != 12) {
+                return -1;
+            }
+            return get_cursor_position(rows, cols);
+        } else {
+            *cols = ws.ws_col;
+            *rows = ws.ws_row;
+            return 0;
         }
-        // int len = strlen(msg_bar1);
-        int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
-        
-        // sprintf(buf, " size : %d string : %d", empty_space, len);
-        char * back_msg_bar1 = (char *)malloc(empty_space * sizeof(char));
-        for(int idx =0; idx < empty_space; ++idx){
-            back_msg_bar1[idx] = ' ';
-        }                        
-        // printf("\x1B[0m");
-        // write(STDOUT_FILENO,"\x1B[0m", strlen("\x1B[0m"));
-        write(STDOUT_FILENO, msg_bar1, terminal_col_size);
-        // write(STDOUT_FILENO, buf, strlen(buf));
-        write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
-        write(STDOUT_FILENO, cursor_status, strlen(cursor_status));
-        write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-        // write(STDOUT_FILENO, "\x1B[0m\r\n", strlen("\r\n"));
-    }else if (terminal_line == terminal_row_size - 1){
-        msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
-        sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
-        write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
     }
-}
+
+    void draw_msg_line(int terminal_line){
+        
+        if(terminal_line == terminal_row_size - 2){
+            char cursor_status[101];
+            sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y + cursor_y_out + 1);
+            msg_bar1 = (char *)malloc(terminal_col_size * sizeof(char));
+            if(filename == NULL){
+                sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
+            }else{
+                sprintf(msg_bar1, "\x1B[7m[%s] - %d lines",filename, file_row_length);
+            }
+            // int len = strlen(msg_bar1);
+            int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
+            
+            // sprintf(buf, " size : %d string : %d", empty_space, len);
+            char * back_msg_bar1 = (char *)malloc(empty_space * sizeof(char));
+            for(int idx =0; idx < empty_space; ++idx){
+                back_msg_bar1[idx] = ' ';
+            }                        
+            // printf("\x1B[0m");
+            // write(STDOUT_FILENO,"\x1B[0m", strlen("\x1B[0m"));
+            write(STDOUT_FILENO, msg_bar1, terminal_col_size);
+            // write(STDOUT_FILENO, buf, strlen(buf));
+            write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
+            write(STDOUT_FILENO, cursor_status, strlen(cursor_status));
+            write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+            // write(STDOUT_FILENO, "\x1B[0m\r\n", strlen("\r\n"));
+        }else if (terminal_line == terminal_row_size - 1){
+            msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
+            sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
+            write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
+        }
+    }
+#endif
+
 
 /*initialize - no argument*/
 void open_new_terminal(){
-    int terminal_line = 0;
+    #ifdef _WIN32
 
-    for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
-        // if(terminal_line == terminal_row_size - 2){
-        //     msg_bar1 = (char *)malloc(terminal_col_size * sizeof(char));
-        //     sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
-            
-        //     int empty_space = terminal_col_size - strlen(msg_bar1);
-        //     char * back_msg_bar1 = (char *)malloc(empty_space * sizeof(char));
-        //     for(int idx =0; idx < empty_space; ++idx){
-        //         back_msg_bar1[idx] = ' ';
-        //     }                        
-        //     // printf("\x1B[0m");
-        //     // write(STDOUT_FILENO,"\x1B[0m", strlen("\x1B[0m"));
-        //     write(STDOUT_FILENO, msg_bar1, terminal_col_size);
-        //     write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
-        //     write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-        //     // write(STDOUT_FILENO, "\x1B[0m\r\n", strlen("\r\n"));
-        // }else if (terminal_line == terminal_row_size - 1){
-        //     msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
-        //     sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
-        //     write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
-        // }
-        if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
-            draw_msg_line(terminal_line);
-        }
-        else if(terminal_line == terminal_row_size / 3){
-            int title_left_empty_size = terminal_col_size / 3;
-            write(STDOUT_FILENO, "~", 1);
-            while(title_left_empty_size > 0){
-                write(STDOUT_FILENO, " ", 1);
-                title_left_empty_size--;
+    #else
+        int terminal_line = 0;
+
+        for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            // if(terminal_line == terminal_row_size - 2){
+            //     msg_bar1 = (char *)malloc(terminal_col_size * sizeof(char));
+            //     sprintf(msg_bar1, "\x1B[7m[No Name] - %d lines",file_row_length);
+                
+            //     int empty_space = terminal_col_size - strlen(msg_bar1);
+            //     char * back_msg_bar1 = (char *)malloc(empty_space * sizeof(char));
+            //     for(int idx =0; idx < empty_space; ++idx){
+            //         back_msg_bar1[idx] = ' ';
+            //     }                        
+            //     // printf("\x1B[0m");
+            //     // write(STDOUT_FILENO,"\x1B[0m", strlen("\x1B[0m"));
+            //     write(STDOUT_FILENO, msg_bar1, terminal_col_size);
+            //     write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
+            //     write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+            //     // write(STDOUT_FILENO, "\x1B[0m\r\n", strlen("\r\n"));
+            // }else if (terminal_line == terminal_row_size - 1){
+            //     msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
+            //     sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+            //     write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
+            // }
+            if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                draw_msg_line(terminal_line);
             }
-            write(STDOUT_FILENO, "Visual Text Editor -- version 0.0.1\r\n", strlen("Visual Text Editor -- version 0.0.1\r\n"));
-        }else{
-            if(terminal_line < terminal_row_size -1){
-                write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+            else if(terminal_line == terminal_row_size / 3){
+                int title_left_empty_size = terminal_col_size / 3;
+                write(STDOUT_FILENO, "~", 1);
+                while(title_left_empty_size > 0){
+                    write(STDOUT_FILENO, " ", 1);
+                    title_left_empty_size--;
+                }
+                write(STDOUT_FILENO, "Visual Text Editor -- version 0.0.1\r\n", strlen("Visual Text Editor -- version 0.0.1\r\n"));
             }else{
-                write(STDOUT_FILENO, "~", strlen("~"));
+                if(terminal_line < terminal_row_size -1){
+                    write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+                }else{
+                    write(STDOUT_FILENO, "~", strlen("~"));
+                }
             }
         }
-    }
-    write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+        write(STDOUT_FILENO, "\033[H", strlen("\033[H")); 
+    #endif
+
+   
 }
 
 
 /* drawing file initial screen */
 void draw_file_line(void){ // 0 ~
-    for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
-        // if(terminal_line == terminal_row_size-1){
-        //     char buf[100];
-        //     for(int i=0; i< 10; ++i){
-        //       sprintf(buf, "%d ", row_info[terminal_line].row[i]);  
-        //       write(STDOUT_FILENO, buf, strlen(buf));
-        //     }
-        //     // sprintf(buf, "")
-        //     // write(STDOUT_FILENO, "hello\r", strlen("hello\r"));
-        // }else 
-        if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
-            draw_msg_line(terminal_line);
-        }else if(terminal_line > file_row_length){
-            // char buf[100];
-            // sprintf(buf, "line length : %d %d %d", row_info[terminal_line].len, terminal_line, terminal_row_size);
-            // write(STDOUT_FILENO, row_info[terminal_line].row, row_info[terminal_line].len);
-            // write(STDOUT_FILENO, buf, strlen(buf));
-            if(terminal_line < terminal_row_size - 1){
-                write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+    #ifdef _WIN32
+
+    #else
+        for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            // if(terminal_line == terminal_row_size-1){
+            //     char buf[100];
+            //     for(int i=0; i< 10; ++i){
+            //       sprintf(buf, "%d ", row_info[terminal_line].row[i]);  
+            //       write(STDOUT_FILENO, buf, strlen(buf));
+            //     }
+            //     // sprintf(buf, "")
+            //     // write(STDOUT_FILENO, "hello\r", strlen("hello\r"));
+            // }else 
+            if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                draw_msg_line(terminal_line);
+            }else if(terminal_line > file_row_length){
+                // char buf[100];
+                // sprintf(buf, "line length : %d %d %d", row_info[terminal_line].len, terminal_line, terminal_row_size);
+                // write(STDOUT_FILENO, row_info[terminal_line].row, row_info[terminal_line].len);
+                // write(STDOUT_FILENO, buf, strlen(buf));
+                if(terminal_line < terminal_row_size - 1){
+                    write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+                }else{
+                    write(STDOUT_FILENO, "~", strlen("~"));
+                }
             }else{
-                write(STDOUT_FILENO, "~", strlen("~"));
+                // char buf[100];
+                // sprintf(buf, "line length : %d %d %d", row_info[terminal_line].len, terminal_line, terminal_row_size);
+                //If the size of the line is larger than the column size of the terminal, it exceeds it, so the size is reduced
+                if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+                
+                
+                write(STDOUT_FILENO, row_info[terminal_line].row, row_info[terminal_line].len);
+                // write(STDOUT_FILENO, buf, strlen(buf));
+                if(terminal_line < terminal_row_size - 1){
+                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                }
+                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
             }
-        }else{
-            // char buf[100];
-            // sprintf(buf, "line length : %d %d %d", row_info[terminal_line].len, terminal_line, terminal_row_size);
-            //If the size of the line is larger than the column size of the terminal, it exceeds it, so the size is reduced
-            if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
-            
-            
-            write(STDOUT_FILENO, row_info[terminal_line].row, row_info[terminal_line].len);
-            // write(STDOUT_FILENO, buf, strlen(buf));
-            if(terminal_line < terminal_row_size - 1){
-                write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-            }
-            write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
         }
-    }
-    write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+        write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+    #endif
+    
 }
 
 
 /* Drawing the screen when the screen size is exceeded using the arrow keys */
 void down_update_file_line(void){
-    //cursor_y가 터미널 사이즈보다 크게 되었을 때 한 번만 업데이트되면 된다.
-    if(cursor_y == terminal_row_size - 3 && down_status == 1){
-        for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
-            if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
-                draw_msg_line(terminal_line);
-             }else{
-                int cur_line = terminal_line + cursor_y_out;
-                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-                if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
-                write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
-                if(terminal_line < terminal_row_size-1){
-                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-              }
-            } 
+    #ifdef _WIN32
+
+    #else
+        //cursor_y가 터미널 사이즈보다 크게 되었을 때 한 번만 업데이트되면 된다.
+        if(cursor_y == terminal_row_size - 3 && down_status == 1){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out;
+                    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+                    if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+                    write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
+                    if(terminal_line < terminal_row_size-1){
+                        write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                }
+                } 
+            }
+            down_status = 0;
         }
-        down_status = 0;
-    }
+    #endif
+    
 }
 
 void up_update_file_line(){
-    //it only needs to be updated once when cursor_y becomes larger than the terminal size.
-    if(cursor_y == 0 && up_status == 1 && cursor_y_out > 0){
-        for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
-            if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
-                draw_msg_line(terminal_line);
-             }else{
-                int cur_line = terminal_line + cursor_y_out - 1;
-                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-                if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
-                write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
-                if(terminal_line < terminal_row_size-1){
-                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+    #ifdef _WIN32
+
+    #else
+        //it only needs to be updated once when cursor_y becomes larger than the terminal size.
+        if(cursor_y == 0 && up_status == 1 && cursor_y_out > 0){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out - 1;
+                    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+                    if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+                    write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
+                    if(terminal_line < terminal_row_size-1){
+                        write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                    }
                 }
-             }
-            
+                
+            }
+            write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+            up_status = 0;
         }
-        write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
-        up_status = 0;
-    }
+    #endif
+    
 }
 
-char* tabs_to_spaces(char * line, ssize_t length){
+char* tabs_to_spaces(char * line, int length){
     char * modified_line = malloc(length * 4);
 
     int pos = 0;
 
-    for(ssize_t i=0; i<length; ++i){
+    for(int i=0; i<length; ++i){
         if(line[i]=='\t'){
             for(int j=0; j<8; ++j){
                 modified_line[pos++] = ' ';
@@ -309,7 +337,11 @@ char* tabs_to_spaces(char * line, ssize_t length){
 void open_file(const char * filename){
     char * line = NULL;
     size_t len = 0;
-    ssize_t read;
+    #ifdef _WIN32
+        int read;
+    #else
+        ssize_t read;
+    #endif
 
     FILE * fp = fopen(filename, "r");
     if(fp == NULL){
@@ -349,80 +381,93 @@ void open_file(const char * filename){
 
 
 int read_keypress(void){
-    char buf[4];
-    int num_read;
-    
-    while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
-        if (num_read == -1) {
-            perror("read");
-             exit(1);
-        }
-    }
-    if(buf[0]=='\033'){ 
-        if(read(STDOUT_FILENO, &buf[1], 1) != 1) return '\033';
-        // write(STDOUT_FILENO, "try esc1\r\n", strlen("try esc1\r\n"));
-        if(read(STDOUT_FILENO, &buf[2], 1) != 1) return '\033';
-        // write(STDOUT_FILENO, "try esc2\r\n", strlen("try esc2\r\n"));
+    #ifdef _WIN32
 
-        // if(read(STDOUT_FILENO, &buf[3], 1) != 1) return '\033';
-        // return buf[0];
-
-        if(buf[1]=='['){
-            switch(buf[2]){
-                case 'A': //Up
-                    return UP_ARROW; // \033[A
-                case 'B': //down
-                    return DOWN_ARROW; // \033[B
-                case 'C': //right 
-                    return RIGHT_ARROW;  // \033[C
-                case 'D': //left
-                    return LEFT_ARROW; // \033[D
-                case 'H': //'\033[H' Home
-                    return HOME;
-                case 'F': //'\033[F' End
-                    return END;
+    #else
+        char buf[4];
+        int num_read;
+        
+        while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
+            if (num_read == -1) {
+                perror("read");
+                exit(1);
             }
-            if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
+        }
+        if(buf[0]=='\033'){ 
+            if(read(STDOUT_FILENO, &buf[1], 1) != 1) return '\033';
+            // write(STDOUT_FILENO, "try esc1\r\n", strlen("try esc1\r\n"));
+            if(read(STDOUT_FILENO, &buf[2], 1) != 1) return '\033';
+            // write(STDOUT_FILENO, "try esc2\r\n", strlen("try esc2\r\n"));
 
-            if(buf[3]=='~'){
+            // if(read(STDOUT_FILENO, &buf[3], 1) != 1) return '\033';
+            // return buf[0];
+
+            if(buf[1]=='['){
                 switch(buf[2]){
-                    case '1': //'\033[1~' Home
+                    case 'A': //Up
+                        return UP_ARROW; // \033[A
+                    case 'B': //down
+                        return DOWN_ARROW; // \033[B
+                    case 'C': //right 
+                        return RIGHT_ARROW;  // \033[C
+                    case 'D': //left
+                        return LEFT_ARROW; // \033[D
+                    case 'H': //'\033[H' Home
                         return HOME;
-                    case '4': //'\033[4~' end
+                    case 'F': //'\033[F' End
                         return END;
-                    case '5': //'\033[5~' page up
-                        return PAGE_UP;
-                    case '6': //'\033[6~' page down
-                        return PAGE_DOWN;
+                }
+                if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
+
+                if(buf[3]=='~'){
+                    switch(buf[2]){
+                        case '1': //'\033[1~' Home
+                            return HOME;
+                        case '4': //'\033[4~' end
+                            return END;
+                        case '5': //'\033[5~' page up
+                            return PAGE_UP;
+                        case '6': //'\033[6~' page down
+                            return PAGE_DOWN;
+                    }
                 }
             }
+            return '\033';
+        }else{
+            return buf[0];
         }
-        return '\033';
-    }else{
-        return buf[0];
-    }
+    #endif
+    
 }
 
 void page_down_draw_line(){
-    if(page_down_status == 1){
-        for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
-            if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
-                draw_msg_line(terminal_line);
-             }else{
-                int cur_line = terminal_line + cursor_y_out;
-                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-                if(row_info[cur_line].len > terminal_col_size) row_info[cur_line].len = terminal_col_size;
-                write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
-                if(terminal_line < terminal_row_size-1){
-                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-              }
-            } 
+    #ifdef _WIN32
+
+    #else
+        if(page_down_status == 1){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out;
+                    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+                    if(row_info[cur_line].len > terminal_col_size) row_info[cur_line].len = terminal_col_size;
+                    write(STDOUT_FILENO, row_info[cur_line].row, row_info[cur_line].len);
+                    if(terminal_line < terminal_row_size-1){
+                        write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                }
+                } 
+            }
+            page_down_status = 0;
         }
-        page_down_status = 0;
-    }
+    #endif
+    
 }
 
 void page_up_draw_line(){
+    #ifdef _WIN32
+
+    #else
     if(page_up_status == 1){
         for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
             if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
@@ -439,138 +484,156 @@ void page_up_draw_line(){
         }
         page_up_status = 0;
     }
+    #endif
+
+    
 }
 
 
 void move_cursor(int keypress, char * filename){
-    if(keypress == UP_ARROW){
-        if(cursor_y > 0){
-            cursor_y--;
-            if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
-                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
-            }
-        }else if (cursor_y==0 && cursor_y_out > 0){
-            up_status = 1;
-            cursor_y_out--;
-            if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
-                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
-            }
-        }
-        
-    }
-    if(keypress == DOWN_ARROW){
-        //0 ~ 18
-        if(cursor_y + cursor_y_out != file_row_length-1){
-            // char buf[30];
-            // sprintf(buf, "into");
-            // write(STDOUT_FILENO, buf, strlen(buf));
+    #ifdef _WIN32
 
-            if(cursor_y < terminal_row_size - 3){
-                if(cursor_y < file_row_length-1){
-                    cursor_y++;
-                    if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+    #else
+        if(keypress == UP_ARROW){
+            if(cursor_y > 0){
+                cursor_y--;
+                if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
                     cursor_x = row_info[cursor_y+cursor_y_out].len-1;
-                    }                
                 }
-            }else if(cursor_y == terminal_row_size-3){
-                if(cursor_y_out+cursor_y <= file_row_length){
-                    cursor_y_out++;
-                    down_status = 1;
-                    if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+            }else if (cursor_y==0 && cursor_y_out > 0){
+                up_status = 1;
+                cursor_y_out--;
+                if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
                     cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                }
+            }
+            
+        }
+        if(keypress == DOWN_ARROW){
+            //0 ~ 18
+            if(cursor_y + cursor_y_out != file_row_length-1){
+                // char buf[30];
+                // sprintf(buf, "into");
+                // write(STDOUT_FILENO, buf, strlen(buf));
+
+                if(cursor_y < terminal_row_size - 3){
+                    if(cursor_y < file_row_length-1){
+                        cursor_y++;
+                        if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                        cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                        }                
+                    }
+                }else if(cursor_y == terminal_row_size-3){
+                    if(cursor_y_out+cursor_y <= file_row_length){
+                        cursor_y_out++;
+                        down_status = 1;
+                        if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                        cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                        }
                     }
                 }
             }
-        }
-       
-    }
-    if(keypress == LEFT_ARROW){
-        if(cursor_x > 0){
-            cursor_x--;
-        }
-    }
-    if(keypress == RIGHT_ARROW){
-        if(filename != NULL){
-            if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
-            cursor_x++;
-        }
-        }
         
-    }
-    if(keypress == HOME){
-        cursor_x = 0;
-    }
-    if(keypress == END){
-        if(filename != NULL){
-            cursor_x = row_info[cursor_y+cursor_y_out].len-1;
         }
-    }
-    if(keypress == PAGE_UP){
-        if(cursor_y != 0) {
-            cursor_y = 0;
-        }else{
-            cursor_y_out -= terminal_row_size-2;
-            
-            if(cursor_y_out < terminal_row_size-2){
-                cursor_y_out = 0;
+        if(keypress == LEFT_ARROW){
+            if(cursor_x > 0){
+                cursor_x--;
             }
-            page_up_status = 1;
-            page_up_draw_line();
         }
-    }
-        
-    if(keypress == PAGE_DOWN){
-        if(cursor_y != terminal_row_size - 3){
-            cursor_y = terminal_row_size -3;
-        }else{
-            // char buf[30];
-            // sprintf(buf, "into");
-            // write(STDOUT_FILENO, buf, strlen(buf));
-            cursor_y_out += terminal_row_size-2;
-            
-            if(cursor_y_out + terminal_row_size > file_row_length){
-                cursor_y_out = file_row_length - terminal_row_size+2;
+        if(keypress == RIGHT_ARROW){
+            if(filename != NULL){
+                if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
+                cursor_x++;
             }
-            page_down_status = 1;
-            page_down_draw_line();
+            }
+            
         }
-    }
+        if(keypress == HOME){
+            cursor_x = 0;
+        }
+        if(keypress == END){
+            if(filename != NULL){
+                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+            }
+        }
+        if(keypress == PAGE_UP){
+            if(cursor_y != 0) {
+                cursor_y = 0;
+            }else{
+                cursor_y_out -= terminal_row_size-2;
+                
+                if(cursor_y_out < terminal_row_size-2){
+                    cursor_y_out = 0;
+                }
+                page_up_status = 1;
+                page_up_draw_line();
+            }
+        }
+            
+        if(keypress == PAGE_DOWN){
+            if(cursor_y != terminal_row_size - 3){
+                cursor_y = terminal_row_size -3;
+            }else{
+                // char buf[30];
+                // sprintf(buf, "into");
+                // write(STDOUT_FILENO, buf, strlen(buf));
+                cursor_y_out += terminal_row_size-2;
+                
+                if(cursor_y_out + terminal_row_size > file_row_length){
+                    cursor_y_out = file_row_length - terminal_row_size+2;
+                }
+                page_down_status = 1;
+                page_down_draw_line();
+            }
+        }
 
-    char cursor_location[32];
-    // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
-    sprintf(cursor_location,"\033[%d;%dH", cursor_y+1, cursor_x+1);
-    write(STDOUT_FILENO, cursor_location, strlen(cursor_location));
+        char cursor_location[32];
+        // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
+        sprintf(cursor_location,"\033[%d;%dH", cursor_y+1, cursor_x+1);
+        write(STDOUT_FILENO, cursor_location, strlen(cursor_location));
+    #endif
+    
 }
 
 
 /* Screen updates when input something */
 void input_file_line(void){
-     write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+    #ifdef _WIN32
 
-    for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
-        if(terminal_line == terminal_row_size -2 || terminal_line == terminal_row_size -1){
-            draw_msg_line(terminal_line);
-        }else if(terminal_line > file_row_length){
-            if(terminal_line < terminal_row_size - 1){
-                write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+    #else
+        write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+
+        for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            if(terminal_line == terminal_row_size -2 || terminal_line == terminal_row_size -1){
+                draw_msg_line(terminal_line);
+            }else if(terminal_line > file_row_length){
+                if(terminal_line < terminal_row_size - 1){
+                    write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+                }else{
+                    write(STDOUT_FILENO, "~", strlen("~"));
+                }
             }else{
-                write(STDOUT_FILENO, "~", strlen("~"));
+                if(row_info[terminal_line+cursor_y_out].len > terminal_col_size) row_info[terminal_line+cursor_y_out].len = terminal_col_size;
+                
+                write(STDOUT_FILENO, row_info[terminal_line+cursor_y_out].row, row_info[terminal_line+cursor_y_out].len);
+                // write(STDOUT_FILENO, buf, strlen(buf));
+                if(terminal_line < terminal_row_size - 1){
+                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                }
+                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
             }
-        }else{
-            if(row_info[terminal_line+cursor_y_out].len > terminal_col_size) row_info[terminal_line+cursor_y_out].len = terminal_col_size;
-            
-            write(STDOUT_FILENO, row_info[terminal_line+cursor_y_out].row, row_info[terminal_line+cursor_y_out].len);
-            // write(STDOUT_FILENO, buf, strlen(buf));
-            if(terminal_line < terminal_row_size - 1){
-                write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-            }
-            write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
         }
-    }
+    #endif
+    
 }
 
 /*Process backspace*/
 void backspace_process(void){
+    #ifdef _WIN32
+
+    #else
+    
+    #endif
     if(cursor_x >0){
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x-1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - 1);
         row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len-1);
@@ -616,6 +679,11 @@ void backspace_process(void){
 
 /* Enter key process */
 void enter_process(void){
+    #ifdef _WIN32
+
+    #else
+    
+    #endif
     row_info = realloc(row_info, sizeof(file_row_info)*file_row_length + sizeof(file_row_info));
     
     /*allocate new line*/
@@ -690,59 +758,80 @@ void enter_process(void){
 
 /*input character given arguments*/
 void draw_character(int c){
-    row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
-    memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
-    row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-    row_info[cursor_y+cursor_y_out].len +=1;
-    input_file_line();
-    cursor_x++;
+    #ifdef _WIN32
+
+    #else
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
+        row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
+        row_info[cursor_y+cursor_y_out].len +=1;
+        input_file_line();
+        cursor_x++;
+    #endif
+    
 }
 
 /*input charater given no arguments*/
 void draw_character_newfile(int c){
-    row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+    #ifdef _WIN32
 
-    row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
-    memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
-    row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-    row_info[cursor_y+cursor_y_out].len +=2;
-    input_file_line();
-    cursor_x++;
+    #else
+        row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
+        row_info[cursor_y+cursor_y_out].len +=2;
+        input_file_line();
+        cursor_x++;
+    #endif
+    
 }
 
 int save_read_keypress(void){
-    char buf;
 
-    int num_read;
+    #ifdef _WIN32
 
-    while ((num_read = read(STDIN_FILENO, &buf, 1)) != 1) {
-        if (num_read == -1) {
-            perror("read");
-             exit(1);
+    #else
+        char buf;
+
+        int num_read;
+
+        while ((num_read = read(STDIN_FILENO, &buf, 1)) != 1) {
+            if (num_read == -1) {
+                perror("read");
+                exit(1);
+            }
         }
-    }
 
-    if(buf=='\033') return ESC;
-    else if(buf=='\r') return ENTER;
-    else if(buf==BACK_SPACE)return BACK_SPACE;
-    else return buf;
+        if(buf=='\033') return ESC;
+        else if(buf=='\r') return ENTER;
+        else if(buf==BACK_SPACE)return BACK_SPACE;
+        else return buf;
+    #endif
+   
 }
 
 void save_draw_msg_line(char * save_string, int len){
-    char save_msgbar[300];
-    char clear[100];
-    char relocation[100];
+    #ifdef _WIN32
 
-    sprintf(relocation,"\033[%dH", terminal_row_size);
-    write(STDOUT_FILENO, relocation, strlen(relocation));
-    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+    #else
+        char save_msgbar[300];
+        char clear[100];
+        char relocation[100];
 
-    sprintf(save_msgbar,"file name : %s",save_string);
-    write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
+        sprintf(relocation,"\033[%dH", terminal_row_size);
+        write(STDOUT_FILENO, relocation, strlen(relocation));
+        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
 
-    sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+13);
-    write(STDOUT_FILENO, relocation, strlen(relocation));
-    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+        sprintf(save_msgbar,"file name : %s",save_string);
+        write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
+
+        sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+13);
+        write(STDOUT_FILENO, relocation, strlen(relocation));
+        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+    #endif
+    
 }
 
 void save_file(void){
@@ -796,46 +885,53 @@ void save_file(void){
         }
         quit_status=0;
         fclose(fp);
-    }
-
-    
+    }    
 }
 
 int search_read_keypress(void){
-    char buf;
+    #ifdef _WIN32
 
-    int num_read;
+    #else
+        char buf;
 
-    while ((num_read = read(STDIN_FILENO, &buf, 1)) != 1) {
-        if (num_read == -1) {
-            perror("read");
-             exit(1);
+        int num_read;
+
+        while ((num_read = read(STDIN_FILENO, &buf, 1)) != 1) {
+            if (num_read == -1) {
+                perror("read");
+                exit(1);
+            }
         }
-    }
 
-    if(buf=='\033') return ESC;
-    else if(buf=='\r') return ENTER;
-    else if(buf==BACK_SPACE)return BACK_SPACE;
-    else return buf;
+        if(buf=='\033') return ESC;
+        else if(buf=='\r') return ENTER;
+        else if(buf==BACK_SPACE)return BACK_SPACE;
+        else return buf;
+    #endif
+    
 }
 
 void search_draw_msg_line(char * search_string, int len){
-    char search_msgbar[300];
-    char clear[100];
-    char relocation[100];
-    // sprintf(clear, "\033[%dK", terminal_row_size);
+    #ifdef _WIN32
 
-    sprintf(relocation,"\033[%dH", terminal_row_size);
-    write(STDOUT_FILENO, relocation, strlen(relocation));
-    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+    #else
+        char search_msgbar[300];
+        char clear[100];
+        char relocation[100];
+        // sprintf(clear, "\033[%dK", terminal_row_size);
 
-    sprintf(search_msgbar,"Search(Enter to search / ESC to cancel) : %s",search_string);
-    write(STDOUT_FILENO, search_msgbar, strlen(search_msgbar));
+        sprintf(relocation,"\033[%dH", terminal_row_size);
+        write(STDOUT_FILENO, relocation, strlen(relocation));
+        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
 
-    sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+43);
-    write(STDOUT_FILENO, relocation, strlen(relocation));
-    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+        sprintf(search_msgbar,"Search(Enter to search / ESC to cancel) : %s",search_string);
+        write(STDOUT_FILENO, search_msgbar, strlen(search_msgbar));
 
+        sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+43);
+        write(STDOUT_FILENO, relocation, strlen(relocation));
+        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+    #endif
+    
     // write(STDOUT_FILENO, relocation, strlen(relocation));
 
 }
@@ -873,76 +969,93 @@ int KMP(const char * row, const char * pattern, int row_len, int pattern_len){
 }
 
 void while_search_draw_line(int cur_row, int cur_col){
-    write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
-    for(int terminal_line=0; terminal_line<terminal_row_size-2; ++terminal_line){
-        write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-        // if(terminal_line == 0){
+    #ifdef _WIN32
 
-        // }else 
-        
-        if(terminal_line+cur_row > file_row_length){
-            if(terminal_line < terminal_row_size - 1){
-                write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
-            }else{
-                write(STDOUT_FILENO, "~", strlen("~"));
-            }
-        }else{
-            if(row_info[terminal_line+cur_row].len > terminal_col_size) row_info[terminal_line+cur_row].len = terminal_col_size;
+    #else
+        write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
-            write(STDOUT_FILENO, row_info[terminal_line + cur_row].row, row_info[terminal_line + cur_row].len);
-
-            if(terminal_line < terminal_row_size - 3){
-                write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
-            }
+        for(int terminal_line=0; terminal_line<terminal_row_size-2; ++terminal_line){
             write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+            // if(terminal_line == 0){
+
+            // }else 
+            
+            if(terminal_line+cur_row > file_row_length){
+                if(terminal_line < terminal_row_size - 1){
+                    write(STDOUT_FILENO, "~\r\n", strlen("~\r\n"));
+                }else{
+                    write(STDOUT_FILENO, "~", strlen("~"));
+                }
+            }else{
+                if(row_info[terminal_line+cur_row].len > terminal_col_size) row_info[terminal_line+cur_row].len = terminal_col_size;
+
+                write(STDOUT_FILENO, row_info[terminal_line + cur_row].row, row_info[terminal_line + cur_row].len);
+
+                if(terminal_line < terminal_row_size - 3){
+                    write(STDOUT_FILENO, "\r\n", strlen("\r\n"));
+                }
+                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+            }
         }
-    }
-    char buf[30];
-    sprintf(buf, "\033[%d;%dH", 0, cur_col+1);
-    write(STDOUT_FILENO, buf, strlen(buf));
+        char buf[30];
+        sprintf(buf, "\033[%d;%dH", 0, cur_col+1);
+        write(STDOUT_FILENO, buf, strlen(buf));
+    #endif
+    
 }
 
 int while_search_read_keypress(void){
-    // if(buf=='\033') return ESC;
-    // else if(buf=='\r') return ENTER;
-    // else if(buf==BACK_SPACE)return BACK_SPACE;
-    // else return buf;
 
-    char buf[4]; 
-    int num_read;
-    
-    while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
-        if (num_read == -1) {
-            perror("read");
-             exit(1);
-        }
-    }
-    if(buf[0]=='\033'){ 
-        if(read(STDOUT_FILENO, &buf[1], 1) != 1) return '\033';
-        if(read(STDOUT_FILENO, &buf[2], 1) != 1) return '\033';
+    #ifdef _WIN32
 
-        if(buf[1]=='['){
-            switch(buf[2]){
-                case 'A': //up
-                    return UP_ARROW; // \033[A
-                case 'B': //down
-                    return DOWN_ARROW; // \033[B
-                case 'C': //right 
-                    return RIGHT_ARROW;  // \033[C
-                case 'D': //left
-                    return LEFT_ARROW; // \033[D
+    #else
+        // if(buf=='\033') return ESC;
+        // else if(buf=='\r') return ENTER;
+        // else if(buf==BACK_SPACE)return BACK_SPACE;
+        // else return buf;
+
+        char buf[4]; 
+        int num_read;
+        
+        while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
+            if (num_read == -1) {
+                perror("read");
+                exit(1);
             }
-            if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
         }
-        return '\033';
-    }else{
-        return '\033';
-    }
+        if(buf[0]=='\033'){ 
+            if(read(STDOUT_FILENO, &buf[1], 1) != 1) return '\033';
+            if(read(STDOUT_FILENO, &buf[2], 1) != 1) return '\033';
+
+            if(buf[1]=='['){
+                switch(buf[2]){
+                    case 'A': //up
+                        return UP_ARROW; // \033[A
+                    case 'B': //down
+                        return DOWN_ARROW; // \033[B
+                    case 'C': //right 
+                        return RIGHT_ARROW;  // \033[C
+                    case 'D': //left
+                        return LEFT_ARROW; // \033[D
+                }
+                if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
+            }
+            return '\033';
+        }else{
+            return '\033';
+        }
+    #endif
+    
 }
 
 /*process Ctrl-f*/
 void search_process(void){
+    #ifdef _WIN32
+
+    #else
+    
+    #endif
     // write(STDOUT_FILENO, "INTO Ctrl+f\r\n", strlen("INTO Ctrl+f\r\n"));
     input_file_line();
     char *search_string=NULL;
@@ -1017,86 +1130,121 @@ void search_process(void){
 }
 
 void shortcut_key(void){
-    int c;
-    c = read_keypress();
+    #ifdef _WIN32
 
-    switch(c){
-        case CTRL_KEY('q'):
-            if(quit_status==0||quit_status==2){
-                // char buf[30];
-                // sprintf(buf, "quit status : %d", quit_status);
-                // write(STDOUT_FILENO, buf, strlen(buf));
-                tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios_quit);
-                system("clear");
-                write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
-                // for(int i = 0; i< terminal_row_size; ++i){
-                //     char buf[30];
-                //     sprintf(buf,"\033[%d;%dH", i, 0);
-                //     write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
-                // }
-                // write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
-                exit(0);
-            }else if(quit_status == 1){
-                //print message bar
-                char quit_msgbar[300];
-                char buf[30];
-                // sprintf(clear, "\033[%dK", terminal_row_size);
+    #else
+         int c;
+        c = read_keypress();
 
-                sprintf(buf,"\033[%dH", terminal_row_size);
-                write(STDOUT_FILENO, buf, strlen(buf));
-                write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+        switch(c){
+            case CTRL_KEY('q'):
+                if(quit_status==0||quit_status==2){
+                    // char buf[30];
+                    // sprintf(buf, "quit status : %d", quit_status);
+                    // write(STDOUT_FILENO, buf, strlen(buf));
+                    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios_quit);
+                    system("clear");
+                    write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+                    // for(int i = 0; i< terminal_row_size; ++i){
+                    //     char buf[30];
+                    //     sprintf(buf,"\033[%d;%dH", i, 0);
+                    //     write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+                    // }
+                    // write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+                    exit(0);
+                }else if(quit_status == 1){
+                    //print message bar
+                    char quit_msgbar[300];
+                    char buf[30];
+                    // sprintf(clear, "\033[%dK", terminal_row_size);
 
-                sprintf(quit_msgbar,"Force quit : Press Ctrl-f 1 more");
-                write(STDOUT_FILENO, quit_msgbar, strlen(quit_msgbar));
-                quit_status++;
-            }
+                    sprintf(buf,"\033[%dH", terminal_row_size);
+                    write(STDOUT_FILENO, buf, strlen(buf));
+                    write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
 
+                    sprintf(quit_msgbar,"Force quit : Press Ctrl-f 1 more");
+                    write(STDOUT_FILENO, quit_msgbar, strlen(quit_msgbar));
+                    quit_status++;
+                }
+
+                
+            case UP_ARROW:
+            case DOWN_ARROW:
+            case RIGHT_ARROW:
+            case LEFT_ARROW:
+            case HOME:
+            case END:
+            case PAGE_UP:   
+            case PAGE_DOWN:
+                move_cursor(c, filename);
+                break;
+            case CTRL_KEY('s'): //save
+                save_file();
+                break;
+            case CTRL_KEY('f'): //search
+                search_process();
+                break;
+            case BACK_SPACE: //127bite
+                backspace_process();
+                quit_status=1;
+                break;
+            case ENTER:
+                enter_process();
+                quit_status=1;
+                break;
             
-        case UP_ARROW:
-        case DOWN_ARROW:
-        case RIGHT_ARROW:
-        case LEFT_ARROW:
-        case HOME:
-        case END:
-        case PAGE_UP:   
-        case PAGE_DOWN:
-            move_cursor(c, filename);
-            break;
-        case CTRL_KEY('s'): //save
-            save_file();
-            break;
-        case CTRL_KEY('f'): //search
-            search_process();
-            break;
-        case BACK_SPACE: //127bite
-            backspace_process();
-            quit_status=1;
-            break;
-        case ENTER:
-            enter_process();
-            quit_status=1;
-            break;
-        
-        default:
-            if(filename){
-                draw_character(c);
-                quit_status=1;
-            }else{
-                draw_character_newfile(c);
-                quit_status=1;
-            }
-            break;
-    }
+            default:
+                if(filename){
+                    draw_character(c);
+                    quit_status=1;
+                }else{
+                    draw_character_newfile(c);
+                    quit_status=1;
+                }
+                break;
+        }
+    #endif
+   
 }
 
 
 int main(int argc, char *argv[]){
     system(CLEAR);
+    #ifdef _WIN32
+        HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
+        DWORD consoleMode;
+        
+        if (!GetConsoleMode(hConsole, &consoleMode)) {
+            fprintf(stderr, "Failed to get console mode. Error code: %lu\n", GetLastError());
+            return 1;
+        }
 
-    /*chage terminal setting*/
+        // Disable input processing (similar to ICANON and IXON)
+        if (!SetConsoleMode(hConsole, consoleMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT))) {
+            fprintf(stderr, "Failed to set console mode. Error code: %lu\n", GetLastError());
+            return 1;
+        }
+
+        CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+        if (GetConsoleScreenBufferInfo(hConsole, &csbiInfo)) {
+            int terminal_col_size = csbiInfo.srWindow.Right - csbiInfo.srWindow.Left + 1;
+            int terminal_row_size = csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top + 1;
+            printf("row size : %d, col size : %d", terminal_row_size, terminal_col_size);
+        } else {
+            fprintf(stderr, "Failed to get console screen buffer info. Error code: %lu\n", GetLastError());
+            return 1;
+        }
+        if(argc >=2){
+            filename = argv[1];
+            open_file(argv[1]);
+        }else{
+           
+        }
+    #else
+        /*chage terminal setting*/
     tcgetattr(STDIN_FILENO, &orig_termios);
     tcgetattr(STDIN_FILENO, &orig_termios_quit);
-    struct termios set = orig_termios;
+    struct termios set = orig_termios;s
     /*
     ICANON: Whenever the user presses a key, that keystroke is processed immediately.
     IXON: Ctrl-S is read as 19 bytes and Ctrl-Q is read as 17 bytes.
@@ -1163,5 +1311,7 @@ int main(int argc, char *argv[]){
             write(STDOUT_FILENO, buf, strlen(buf));
         }   
     }
+    #endif
+    
     return 0;
 }

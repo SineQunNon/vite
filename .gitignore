@@ -1,0 +1,6 @@
+*.json
+*.exe
+Makefile
+.vscode
+*.c
+!vite.c

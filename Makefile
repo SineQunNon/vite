@@ -1,4 +1,8 @@
-vite:vite.c
+CC = gcc
+CFLAGS = -c -g
+
+
+vite : vite.c
 	$(CC) vite.c -o vite
 
 clean :
