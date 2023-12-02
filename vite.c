@@ -1070,22 +1070,22 @@ int main(int argc, char *argv[]){
     tcgetattr(STDIN_FILENO, &orig_termios_quit);
     struct termios set = orig_termios;
     /*
-    ICANON : 사용자가 키를 누를 때마다 해당 키 입력이 즉시 처리된다.
-    IXON : Ctrl-S를 19바이트로 읽히고 Ctrl-Q를 17바이트로 읽힌다.
-    IEXTEN : 기본 터미널 Ctrl-O 키 비활성화
-    ICRNL : Enter 키 13바이트로 읽히게 하기
+    ICANON: Whenever the user presses a key, that keystroke is processed immediately.
+    IXON: Ctrl-S is read as 19 bytes and Ctrl-Q is read as 17 bytes.
+    IEXTEN: Disable default terminal Ctrl-O keys
+    ICRNL: Make the Enter key read as 13 bytes
     */
     set.c_iflag &= ~(IXON | ICRNL);
     set.c_lflag &= ~(ECHO | ICANON | IEXTEN );
 
-    /* 변경한 터미널 속성 적용 */
+    /* Apply changed terminal properties */
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &set);
 
 
     if (get_window_size(&terminal_row_size, &terminal_col_size) != 0) exit(1); 
 
     // char buf[150];
-    // sprintf(buf, "터미널 가로 크기 : %d\r\n터미널 세로 크기 : %d", terminal_col_size, terminal_row_size);
+    // sprintf(buf, "termianl_col_size : %d\r\nterminal_row_size : %d", terminal_col_size, terminal_row_size);
     // write(STDOUT_FILENO, buf, strlen(buf));
     row_info = NULL;
 
@@ -1107,7 +1107,7 @@ int main(int argc, char *argv[]){
             shortcut_key();
 
 
-            //메세지바 업데이트 하기
+            //update message bar
             char buf[32];
             sprintf(buf,"\033[%d:%dH", terminal_row_size-1,cursor_x);
             write(STDOUT_FILENO, buf, strlen(buf));
@@ -1125,7 +1125,7 @@ int main(int argc, char *argv[]){
 
         while(1){
             shortcut_key();
-            //메세지바 업데이트 하기
+            //update message bar
             char buf[32];
             sprintf(buf,"\033[%d:%dH", terminal_row_size-1,cursor_x);
             write(STDOUT_FILENO, buf, strlen(buf));
