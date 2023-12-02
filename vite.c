@@ -19,40 +19,41 @@
 #define ENTER '\r'
 #define ESC 27
 
-int cursor_x; //터미널 x축 커서 위치
-int cursor_y; //터미널 y축 커서 위치
-int cursor_y_out; //사용자가 현재 스크롤 파일의 어떤 행을 가�
-int terminal_row_size; //터미널 세로 사이즈
-int terminal_col_size; //터미널 가로 사이즈
-int file_row_length; //파일 전체 길이
+int cursor_x; //location of terminal x-coordinate
+int cursor_y; //location of terminal y-coordinate
+int cursor_y_out; //tracking of file row
+int terminal_row_size; //terminal row size
+int terminal_col_size; //terminal column size
+int file_row_length; //file total length
 
-int down_status; //터미널 크기 넘어서 아래 방향키가 들어왓는�
-int up_status; //터미널 크기 넘어서 위로 방향키가 들어왔는�
-int page_up_status;
-int page_down_status;
+int down_status; //input down arrow key at bottom
+int up_status; //input up arrow key at top
+int page_up_status; //input page up key at top
+int page_down_status; //input page down key at bottom
 
-char * msg_bar1;
-char * msg_bar2;
+char * msg_bar1; //first message bar
+char * msg_bar2; //second message bar
 char * filename;
 
 int quit_status=0;
 
-//읽어 온 파일 데이터 저장
+//store file information row by row
 typedef struct file_row_info{
     char * row;
     int len;
 }file_row_info;
 
-//서치 위치 저장
+//store location of searching information
 typedef struct search_info{
     int row_location;
     int col_location;
 }search_info;
 
-struct termios orig_termios; //터미널 속성
+struct termios orig_termios; //terminal setting
+struct termios orig_termios_quit; //terminal re-setting
 struct file_row_info *row_info;
 
-/* 터미널 크기 구하기 */
+/* get terminal size */
 int get_cursor_position(int *rows, int *cols) {
     char buf[32];
     unsigned int i = 0;
@@ -107,7 +108,7 @@ void draw_msg_line(int terminal_line){
             sprintf(msg_bar1, "\x1B[7m[%s] - %d lines",filename, file_row_length);
         }
         // int len = strlen(msg_bar1);
-        int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4; //기존의 길이보다 4 길다
+        int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
         
         // sprintf(buf, " size : %d string : %d", empty_space, len);
         char * back_msg_bar1 = (char *)malloc(empty_space * sizeof(char));
@@ -130,7 +131,7 @@ void draw_msg_line(int terminal_line){
     }
 }
 
-/*인자가 없을 때 초기화하면*/
+/*initialize - no argument*/
 void open_new_terminal(){
     int terminal_line = 0;
 
@@ -178,7 +179,7 @@ void open_new_terminal(){
 }
 
 
-/* 파일 초기 화면 그리기 */
+/* drawing file initial screen */
 void draw_file_line(void){ // 0 ~
     for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
         // if(terminal_line == terminal_row_size-1){
@@ -205,7 +206,9 @@ void draw_file_line(void){ // 0 ~
         }else{
             // char buf[100];
             // sprintf(buf, "line length : %d %d %d", row_info[terminal_line].len, terminal_line, terminal_row_size);
-            if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;//라인의 사이즈가 터미널의 열 사이즈보다 크면 초과하므로 크기를 줄임
+            //If the size of the line is larger than the column size of the terminal, it exceeds it, so the size is reduced
+            if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+            
             
             write(STDOUT_FILENO, row_info[terminal_line].row, row_info[terminal_line].len);
             // write(STDOUT_FILENO, buf, strlen(buf));
@@ -219,7 +222,7 @@ void draw_file_line(void){ // 0 ~
 }
 
 
-/* 방향키로 화면 크기 넘었을 때 화면 그리기 */
+/* Drawing the screen when the screen size is exceeded using the arrow keys */
 void down_update_file_line(void){
     //cursor_y가 터미널 사이즈보다 크게 되었을 때 한 번만 업데이트되면 된다.
     if(cursor_y == terminal_row_size - 3 && down_status == 1){
@@ -241,7 +244,7 @@ void down_update_file_line(void){
 }
 
 void up_update_file_line(){
-    //cursor_y가 터미널 사이즈보다 크게 되었을 때 한 번만 업데이트되면 된다.
+    //it only needs to be updated once when cursor_y becomes larger than the terminal size.
     if(cursor_y == 0 && up_status == 1 && cursor_y_out > 0){
         for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
             if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
@@ -295,7 +298,7 @@ void open_file(const char * filename){
     file_row_length=0;
     
     while((read = getline(&line, &len, fp)) != -1){
-        /* 탭을 공백 4칸으로 변경하기 */
+        /* Change tabs to 4 spaces*/
         char * modified_line = tabs_to_spaces(line, read);
 
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
@@ -324,18 +327,9 @@ void open_file(const char * filename){
 
 
 int read_keypress(void){
-    char buf[4]; //방향키 이스케이프 시퀀스 저장할 버퍼
-    int num_read; //읽은 바이트 수 저장
-    /*
-    #include <unistd.h>
-    ssize_t read(int fd, void *buf, size_t count);
+    char buf[4];
+    int num_read;
     
-    fd : 파일 디스크립터
-    buf : 저장할 버퍼
-    count : 읽은 바이트 수
-
-    읽은 데이터 수 반환
-    */
     while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
         if (num_read == -1) {
             perror("read");
@@ -353,30 +347,30 @@ int read_keypress(void){
 
         if(buf[1]=='['){
             switch(buf[2]){
-                case 'A': //위
+                case 'A': //Up
                     return UP_ARROW; // \033[A
-                case 'B': //아래
+                case 'B': //down
                     return DOWN_ARROW; // \033[B
-                case 'C': //오른쪽 
+                case 'C': //right 
                     return RIGHT_ARROW;  // \033[C
-                case 'D': //왼쪽
+                case 'D': //left
                     return LEFT_ARROW; // \033[D
-                case 'H': //'\033[H' 홈
+                case 'H': //'\033[H' Home
                     return HOME;
-                case 'F': //'\033[F' 엔드
+                case 'F': //'\033[F' End
                     return END;
             }
             if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
 
             if(buf[3]=='~'){
                 switch(buf[2]){
-                    case '1': //'\033[1~' 홈
+                    case '1': //'\033[1~' Home
                         return HOME;
-                    case '4': //'\033[4~' 엔드
+                    case '4': //'\033[4~' end
                         return END;
-                    case '5': //'\033[5~' 페이지 업
+                    case '5': //'\033[5~' page up
                         return PAGE_UP;
-                    case '6': //'\033[6~' 페이지 다운
+                    case '6': //'\033[6~' page down
                         return PAGE_DOWN;
                 }
             }
@@ -527,7 +521,7 @@ void move_cursor(int keypress, char * filename){
 }
 
 
-/* 입력이 들어왔을 때 화면 업데이트 */
+/* Screen updates when input something */
 void input_file_line(void){
      write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
@@ -541,7 +535,7 @@ void input_file_line(void){
                 write(STDOUT_FILENO, "~", strlen("~"));
             }
         }else{
-            if(row_info[terminal_line+cursor_y_out].len > terminal_col_size) row_info[terminal_line+cursor_y_out].len = terminal_col_size;//라인의 사이즈가 터미널의 열 사이즈보다 크면 초과하므로 크기를 줄임
+            if(row_info[terminal_line+cursor_y_out].len > terminal_col_size) row_info[terminal_line+cursor_y_out].len = terminal_col_size;
             
             write(STDOUT_FILENO, row_info[terminal_line+cursor_y_out].row, row_info[terminal_line+cursor_y_out].len);
             // write(STDOUT_FILENO, buf, strlen(buf));
@@ -553,7 +547,7 @@ void input_file_line(void){
     }
 }
 
-/*백스페이스 적용하기*/
+/*Process backspace*/
 void backspace_process(void){
     if(cursor_x >0){
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x-1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - 1);
@@ -561,20 +555,20 @@ void backspace_process(void){
         row_info[cursor_y+cursor_y_out].len--;
         input_file_line();
         cursor_x--;
-    }else if(cursor_x==0){ //커서가 가장 앞에 있고, 첫째 줄 라인이 아닌 경우
+    }else if(cursor_x==0){ //When the cursor is at the very front and is not the first line
         if(cursor_y==0&&cursor_y_out==0){
             //nothing is happened
         }else{
-            //현재 커서 위의 문장과 현재 커서가 위치한 문장 합치기
+            //Combine the sentence above the current cursor with the sentence where the cursor is currently located
             int pre_len = row_info[cursor_y+cursor_y_out-1].len;
 
-            //윗 문장 사이즈 저장공간 늘리기
+            //expand storage space for the above sentence size
             row_info[cursor_y+cursor_y_out-1].row = realloc(row_info[cursor_y+cursor_y_out-1].row, row_info[cursor_y+cursor_y_out-1].len+row_info[cursor_y+cursor_y_out].len);
             
-            //윗 문장 가장 뒤에 문장 붙이기
+            //concatenate above sentence with current sentence
             memcpy(&(row_info[cursor_y+cursor_y_out-1].row[row_info[cursor_y+cursor_y_out-1].len-1]), row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len);
 
-            //길이 늘리기
+            //reallocate storage space
             row_info[cursor_y+cursor_y_out-1].len = row_info[cursor_y+cursor_y_out-1].len+row_info[cursor_y+cursor_y_out].len - 1;
 
             memmove(&row_info[cursor_y+cursor_y_out], &row_info[cursor_y+cursor_y_out+1], sizeof(file_row_info)*(file_row_length - (cursor_y+cursor_y_out+1)));
@@ -602,7 +596,7 @@ void backspace_process(void){
 void enter_process(void){
     row_info = realloc(row_info, sizeof(file_row_info)*file_row_length + sizeof(file_row_info));
     
-    /*커서의 위치가 문장의 끝이라면 공백으로 한 줄 생성*/
+    /*allocate new line*/
     if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){
         char * buf = (char*)malloc(sizeof(char)*1);
         
@@ -634,12 +628,12 @@ void enter_process(void){
         // }
         cursor_x = 0;
         cursor_y++;
-    }else if(cursor_x!=0 && cursor_x!=row_info[cursor_y+cursor_y_out].len-1){ //커서가 문자열 가운데 있을 때
+    }else if(cursor_x!=0 && cursor_x!=row_info[cursor_y+cursor_y_out].len-1){ //in the middle of line
         // char buf2[30];
         // sprintf(buf2, "into");
         // write(STDOUT_FILENO, buf2, strlen(buf2));
         char split_sentence[500];
-        char * replace_line=NULL; //엔터 앞의 문자열 다시 저장하기
+        char * replace_line=NULL; //restoring the string before enter
         char * buf=NULL;
 
         memcpy(split_sentence,&(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - cursor_x);
@@ -672,9 +666,8 @@ void enter_process(void){
     }
 }
 
-/*인자가 주어졌을 때 키보드로 문자 입력하기*/
+/*input character given arguments*/
 void draw_character(int c){
-    //현재 어느 행인지 확인
     row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
     memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
     row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
@@ -683,7 +676,7 @@ void draw_character(int c){
     cursor_x++;
 }
 
-/*인자가 주어지지 않았을 때 문자 입력하기*/
+/*input charater given no arguments*/
 void draw_character_newfile(int c){
     row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
@@ -889,24 +882,13 @@ void while_search_draw_line(int cur_row, int cur_col){
 }
 
 int while_search_read_keypress(void){
-    // char buf;
-
-    // int num_read;
-
-    // while ((num_read = read(STDIN_FILENO, &buf, 1)) != 1) {
-    //     if (num_read == -1) {
-    //         perror("read");
-    //          exit(1);
-    //     }
-    // }
-
     // if(buf=='\033') return ESC;
     // else if(buf=='\r') return ENTER;
     // else if(buf==BACK_SPACE)return BACK_SPACE;
     // else return buf;
 
-    char buf[4]; //방향키 이스케이프 시퀀스 저장할 버퍼
-    int num_read; //읽은 바이트 수 저장
+    char buf[4]; 
+    int num_read;
     
     while ((num_read = read(STDIN_FILENO, &buf[0], 1)) != 1) {
         if (num_read == -1) {
@@ -920,13 +902,13 @@ int while_search_read_keypress(void){
 
         if(buf[1]=='['){
             switch(buf[2]){
-                case 'A': //위
+                case 'A': //up
                     return UP_ARROW; // \033[A
-                case 'B': //아래
+                case 'B': //down
                     return DOWN_ARROW; // \033[B
-                case 'C': //오른쪽 
+                case 'C': //right 
                     return RIGHT_ARROW;  // \033[C
-                case 'D': //왼쪽
+                case 'D': //left
                     return LEFT_ARROW; // \033[D
             }
             if(read(STDOUT_FILENO, &buf[3], 1)!=1) return '\033';
@@ -937,7 +919,7 @@ int while_search_read_keypress(void){
     }
 }
 
-/*검색 함수*/
+/*process Ctrl-f*/
 void search_process(void){
     // write(STDOUT_FILENO, "INTO Ctrl+f\r\n", strlen("INTO Ctrl+f\r\n"));
     input_file_line();
@@ -953,7 +935,6 @@ void search_process(void){
             break;
         }
         else if(c=='\r'){
-            /*탐색 성공한 행 찾기 -> 첫 화면 보여주기*/
             search_info * location = NULL;
             int size = 0;
             for(int i=0; i<file_row_length; ++i){
@@ -1023,10 +1004,12 @@ void shortcut_key(void){
                 // char buf[30];
                 // sprintf(buf, "quit status : %d", quit_status);
                 // write(STDOUT_FILENO, buf, strlen(buf));
+                tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios_quit);
+                
                 write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
                 exit(0);
             }else{
-                //메세지 바 출력하기
+                //print message bar
                 char quit_msgbar[300];
                 char buf[30];
                 // sprintf(clear, "\033[%dK", terminal_row_size);
@@ -1057,7 +1040,7 @@ void shortcut_key(void){
         case CTRL_KEY('f'): //search
             search_process();
             break;
-        case BACK_SPACE: //127바이트
+        case BACK_SPACE: //127bite
             backspace_process();
             quit_status=1;
             break;
@@ -1082,8 +1065,9 @@ void shortcut_key(void){
 int main(int argc, char *argv[]){
     system("clear");
 
-    /*터미널 속성 바꾸기*/
+    /*chage terminal setting*/
     tcgetattr(STDIN_FILENO, &orig_termios);
+    tcgetattr(STDIN_FILENO, &orig_termios_quit);
     struct termios set = orig_termios;
     /*
     ICANON : 사용자가 키를 누를 때마다 해당 키 입력이 즉시 처리된다.
