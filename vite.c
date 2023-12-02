@@ -125,7 +125,7 @@ struct file_row_info *row_info;
     }
 #endif
 
-void draw_msg_line(int terminal_line){
+void   draw_msg_line(int terminal_line){
     #ifdef _WIN32
         if(terminal_line == terminal_row_size -2){
             char cursor_status[101];
@@ -157,7 +157,7 @@ void draw_msg_line(int terminal_line){
             sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
             printf("%s", msg_bar2);
         }
-    #else
+    #elif APPLE
          if(terminal_line == terminal_row_size - 2){
             char cursor_status[101];
             sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y + cursor_y_out + 1);
@@ -188,6 +188,34 @@ void draw_msg_line(int terminal_line){
             sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
             write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
         }
+
+    #elif __linux__
+        if(terminal_line == terminal_row_size - 2){
+                char cursor_status[101];
+                sprintf(cursor_status, "no ft | %d/%d", cursor_x + 1, cursor_y_out + 1);
+                msg_bar1 = (char*)malloc(terminal_col_size *(sizeof(char)));
+
+                int empty_space = 0;
+                if(filename == NULL){
+
+                }else{
+                    sprintf(msg_bar1,"\x1B[7m[%s] - %d lines",filename, file_row_length);
+                    empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status) + 4;
+                }
+                write(STDOUT_FILENO, msg_bar1, strlen(msg_bar1));
+                //write(STDOUT_FILENO, cursor_status, strlen(cursor_status));
+
+                for(int i=0; i<empty_space; ++i){
+                    write(STDOUT_FILENO, " ", strlen(" "));
+                }
+                // write(STDOUT_FILENO, back_msg_bar1, strlen(back_msg_bar1));
+                write(STDOUT_FILENO, cursor_status, strlen(cursor_status));
+
+            }else if (terminal_line == terminal_row_size - 1){
+                msg_bar2 = (char *)malloc(terminal_col_size * sizeof(char));
+                sprintf(msg_bar2,"\x1B[0mHELP: Ctrl-s = save | Ctrl-q = quit | Ctrl-f = find");
+                write(STDOUT_FILENO, msg_bar2, strlen(msg_bar2));
+            }
     #endif
 }
         
