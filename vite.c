@@ -5,14 +5,14 @@
     #include <windows.h>
     #include <string.h>
     
-    #define UP_ARROW 22472
-    #define DOWN_ARROW 22480
-    #define LEFT_ARROW 22475
-    #define RIGHT_ARROW 22477
-    #define HOME 22471
-    #define END 22479
-    #define PAGE_UP 22473
-    #define PAGE_DOWN 22481
+    #define UP_ARROW 72
+    #define DOWN_ARROW 80
+    #define LEFT_ARROW 75
+    #define RIGHT_ARROW 77
+    #define HOME 71
+    #define END 79
+    #define PAGE_UP 73
+    #define PAGE_DOWN 81
     #define BACK_SPACE 8
     #define ENTER 13
     #define ESC 27
@@ -131,12 +131,16 @@ void draw_msg_line(int terminal_line){
             char cursor_status[101];
             sprintf(cursor_status, "no ft | %ld/%ld", cursor_x + 1, cursor_y + cursor_y_out + 1);
             msg_bar1 = (char*)malloc(terminal_col_size * (sizeof(char)));
+            int empty_space=0;
             if(filename==NULL){
                 sprintf(msg_bar1, "\n\x1B[7m[No Name] - %d lines", file_row_length);
+                empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status)+4;
             }else{
                 sprintf(msg_bar1, "\x1B[7m[%s] - %d lines",filename, file_row_length);
+                empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status);
             }
-            int empty_space = terminal_col_size - strlen(msg_bar1) - strlen(cursor_status)+4;         
+            //printf("msg_bar1 : %d\n", strlen(msg_bar1));
+            
 
             char * back_msg_bar1 =malloc(sizeof(char));
             for(int idx =0; idx <=empty_space; ++idx){
@@ -277,15 +281,12 @@ void draw_file_line(void){ // 0 ~
                     row_info[terminal_line].len = terminal_col_size;
                 }
 
-                printf("%s", row_info[terminal_line].row);
-
-                if (terminal_line < terminal_row_size - 1) {
+                printf("%s", row_info[terminal_line].row); 
+                if(terminal_line < terminal_row_size - 2){
                     printf("\n");
                 }
-                
             }
         }
-        printf("\033[H");
     #else
         for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
             // if(terminal_line == terminal_row_size-1){
@@ -333,7 +334,25 @@ void draw_file_line(void){ // 0 ~
 /* Drawing the screen when the screen size is exceeded using the arrow keys */
 void down_update_file_line(void){
     #ifdef _WIN32
-
+        if(cursor_y == terminal_row_size - 3 && down_status == 1){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out;
+                    printf("\033[K");
+                    
+                    if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+                    printf("%s", row_info[cur_line].row);
+                    
+                    if(terminal_line < terminal_row_size-1){
+                        printf("\n");
+                }
+                } 
+            }
+            printf("\033[%d;%dH", terminal_row_size-2, 0);
+            down_status = 0;
+        }
     #else
         //cursor_y가 터미널 사이즈보다 크게 되었을 때 한 번만 업데이트되면 된다.
         if(cursor_y == terminal_row_size - 3 && down_status == 1){
@@ -358,7 +377,24 @@ void down_update_file_line(void){
 
 void up_update_file_line(){
     #ifdef _WIN32
-
+        if(cursor_y == 0 && up_status == 1 && cursor_y_out > 0){
+            for(int terminal_line=0; terminal_line < terminal_row_size; ++terminal_line){
+                if(terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size -1){
+                    draw_msg_line(terminal_line);
+                }else{
+                    int cur_line = terminal_line + cursor_y_out - 1;
+                    printf("\033[K");
+                    
+                    if(row_info[terminal_line].len > terminal_col_size) row_info[terminal_line].len = terminal_col_size;
+                    printf("%s",row_info[cur_line].row);
+                    if(terminal_line < terminal_row_size-1){
+                        printf("\n");
+                    }
+                }    
+            }
+            printf("\033[H");
+            up_status = 0;
+        }
     #else
         //it only needs to be updated once when cursor_y becomes larger than the terminal size.
         if(cursor_y == 0 && up_status == 1 && cursor_y_out > 0){
@@ -443,6 +479,7 @@ void open_file(const char * filename){
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info) * (file_row_length + 1));
             row_info[file_row_length].row = initialize_row(line, read);
             row_info[file_row_length].len = strlen(row_info[file_row_length].row);
+            row_info[file_row_length].row[row_info[file_row_length].len-1]='\0';
             file_row_length++;
         }
 
@@ -605,8 +642,6 @@ void page_up_draw_line(){
 
 void move_cursor(int keypress, char * filename){
     #ifdef _WIN32
-
-    #else
         if(keypress == UP_ARROW){
             if(cursor_y > 0){
                 cursor_y--;
@@ -620,7 +655,6 @@ void move_cursor(int keypress, char * filename){
                     cursor_x = row_info[cursor_y+cursor_y_out].len-1;
                 }
             }
-            
         }
         if(keypress == DOWN_ARROW){
             //0 ~ 18
@@ -646,7 +680,96 @@ void move_cursor(int keypress, char * filename){
                     }
                 }
             }
-        
+        }
+        if(keypress == LEFT_ARROW){
+            if(cursor_x > 0){
+                cursor_x--;
+            }
+        }
+        if(keypress == RIGHT_ARROW){
+            if(filename != NULL){
+                if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
+                cursor_x++;
+            }
+            }
+            
+        }
+        if(keypress == HOME){
+            cursor_x = 0;
+        }
+        if(keypress == END){
+            if(filename != NULL){
+                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+            }
+        }
+        if(keypress == PAGE_UP){
+            if(cursor_y != 0) {
+                cursor_y = 0;
+            }else{
+                cursor_y_out -= terminal_row_size-2;
+                
+                if(cursor_y_out < terminal_row_size-2){
+                    cursor_y_out = 0;
+                }
+                page_up_status = 1;
+                //page_up_draw_line();
+            }
+        }
+            
+        if(keypress == PAGE_DOWN){
+            if(cursor_y != terminal_row_size - 3){
+                cursor_y = terminal_row_size -3;
+            }else{
+                cursor_y_out += terminal_row_size-2;
+                
+                if(cursor_y_out + terminal_row_size > file_row_length){
+                    cursor_y_out = file_row_length - terminal_row_size+2;
+                }
+                page_down_status = 1;
+                //page_down_draw_line();
+            }
+        }
+
+        printf("\033[%d;%dH", cursor_y+1, cursor_x+1);
+    #else
+        if(keypress == UP_ARROW){
+            if(cursor_y > 0){
+                cursor_y--;
+                if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                    cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                }
+            }else if (cursor_y==0 && cursor_y_out > 0){
+                up_status = 1;
+                cursor_y_out--;
+                if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                    cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                }
+            }
+        }
+        if(keypress == DOWN_ARROW){
+            //0 ~ 18
+            if(cursor_y + cursor_y_out != file_row_length-1){
+                // char buf[30];
+                // sprintf(buf, "into");
+                // write(STDOUT_FILENO, buf, strlen(buf));
+
+                if(cursor_y < terminal_row_size - 3){
+                    if(cursor_y < file_row_length-1){
+                        cursor_y++;
+                        if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                        cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                        }                
+                    }
+                }else if(cursor_y == terminal_row_size-3){
+                    if(cursor_y_out+cursor_y <= file_row_length){
+                        cursor_y_out++;
+                        down_status = 1;
+                        if(cursor_x > row_info[cursor_y+cursor_y_out].len-1){
+                        cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+                        }
+                    }
+                }
+            }
         }
         if(keypress == LEFT_ARROW){
             if(cursor_x > 0){
@@ -1245,23 +1368,32 @@ void search_process(void){
 void shortcut_key(void){
     #ifdef _WIN32
         int c;
-
+        int d;
         // c = read_keypress();
         c = getch();
-        // printf("%d", c);
+
         switch(c){
-            case CTRL_Q:
-                system(CLEAR);
-                exit(0);
-            case UP_ARROW:
-            case DOWN_ARROW:
-            case RIGHT_ARROW:
-            case LEFT_ARROW:
-            case HOME:
-            case END:
-            case PAGE_UP:   
-            case PAGE_DOWN:
+            case 224:
+                d = getch();      
+                switch(d){
+                    case UP_ARROW:
+                    case DOWN_ARROW:
+                    case RIGHT_ARROW:
+                    case LEFT_ARROW:
+                    case HOME:
+                    case END:
+                    case PAGE_UP:   
+                    case PAGE_DOWN:
+                        move_cursor(d, filename);
+                        break;
+
+                    default:
+                        break;
+                }
                 break;
+            case CTRL_Q:
+                    system(CLEAR);
+                    exit(0);
             case CTRL_S:
                 break;
             case CTRL_F:
@@ -1362,13 +1494,22 @@ int main(int argc, char *argv[]){
         row_info=NULL;
         if(argc >=2){
             filename = argv[1];
-           
-              
-            open_file(argv[1]);
-            //draw_file_line();
 
-            for(int i=0; i<terminal_row_size; ++i){
-                printf("%s", row_info[i].row);
+            open_file(argv[1]);
+            draw_file_line();
+            draw_msg_line(terminal_row_size-2);
+            draw_msg_line(terminal_row_size-1);
+            printf("\033[%d;%dH", cursor_y, cursor_x);
+
+            while(1){
+                if(cursor_y + cursor_y_out < file_row_length-1){
+                    down_update_file_line();
+                }
+                up_update_file_line();
+                shortcut_key();
+
+                
+
             }
             
             //printf("%d", file_row_length);
@@ -1378,6 +1519,7 @@ int main(int argc, char *argv[]){
             open_new_terminal();
             draw_msg_line(terminal_row_size-2);
             draw_msg_line(terminal_row_size-1);
+            printf("\033[%d;%dH", 1, 1);
             while(1){
                 shortcut_key();
             }
