@@ -907,7 +907,7 @@ void move_cursor(int keypress, char * filename){
     #endif
     
 }
-}
+
 
 /* Screen updates when input something */
 void input_file_line(void){
