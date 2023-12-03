@@ -758,15 +758,19 @@ void move_cursor(int keypress, char * filename){
             if(filename != NULL){
                 if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
                 cursor_x++;
+                }
+            }else{
+                if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
+                cursor_x++;
             }
-            }
-            
         }
         if(keypress == HOME){
             cursor_x = 0;
         }
         if(keypress == END){
             if(filename != NULL){
+                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+            }else{
                 cursor_x = row_info[cursor_y+cursor_y_out].len-1;
             }
         }
