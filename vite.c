@@ -847,8 +847,12 @@ void move_cursor(int keypress, char * filename){
         if(keypress == RIGHT_ARROW){
             if(filename != NULL){
                 if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
-                cursor_x++;
-            }
+                    cursor_x++;
+                }
+            }else{
+                if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
+                    cursor_x++;
+                }
             }
             
         }
@@ -857,6 +861,8 @@ void move_cursor(int keypress, char * filename){
         }
         if(keypress == END){
             if(filename != NULL){
+                cursor_x = row_info[cursor_y+cursor_y_out].len-1;
+            }else{
                 cursor_x = row_info[cursor_y+cursor_y_out].len-1;
             }
         }
@@ -1885,7 +1891,7 @@ int main(int argc, char *argv[]){
             shortcut_key();
             //update message bar
             char buf[32];
-            sprintf(buf,"\033[%d;%dH", terminal_row_size-1,cursor_x);
+            sprintf(buf,"\033[%d;%dH", terminal_row_size-1,0);
             write(STDOUT_FILENO, buf, strlen(buf));
             draw_msg_line(terminal_row_size-2);  
             // // write(STDOUT_FILENO, "\033[?25l", strlen("\x1b[?25l"));
