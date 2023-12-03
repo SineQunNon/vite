@@ -1,9 +1,8 @@
-#ifdef _WIN32
+#ifdef _WIN3
     #include <stdio.h>
     #include <stdlib.h>
     #include <conio.h>
-    #include <windows.h>
-       
+    #include <windows.h>       
     #include <string.h>    
     #define UP_ARROW 72
     #define DOWN_ARROW 80
@@ -20,7 +19,7 @@
     #define CTRL_F 6
     #define CTRL_Q 17
     #define CLEAR "cls"
-#else
+#else   
     #include <stdio.h>
     #include <stdlib.h>
     #include <termios.h>
@@ -28,7 +27,6 @@
     #include <string.h>
     #include <sys/ioctl.h>
     #define CTRL_KEY(k) ((k)& 0x1f)
-
     #define UP_ARROW 1111
     #define DOWN_ARROW 2222
     #define LEFT_ARROW 3333
@@ -916,6 +914,7 @@ void input_file_line(void){
         printf("\033[H");
 
         for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            printf("\033[K");
             if(terminal_line == terminal_row_size -2 || terminal_line == terminal_row_size -1){
                 draw_msg_line(terminal_line);
             }else if(terminal_line > file_row_length){
@@ -939,6 +938,7 @@ void input_file_line(void){
         write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
 
         for(int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line){
+            write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
             if(terminal_line == terminal_row_size -2 || terminal_line == terminal_row_size -1){
                 draw_msg_line(terminal_line);
             }else if(terminal_line > file_row_length){
@@ -1015,10 +1015,10 @@ void backspace_process(void){
 
 /* Enter key process */
 void enter_process(void){
-    row_info = realloc(row_info, sizeof(file_row_info)*file_row_length + sizeof(file_row_info));
+    row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
 
     /*allocate new line*/
-    if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){
+    if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){//tail
         char * buf = (char*)malloc(sizeof(char)*1);
         
         // write(STDOUT_FILENO, buf, strlen(buf));
@@ -1034,7 +1034,7 @@ void enter_process(void){
         // }
         cursor_x = 0;
         cursor_y++;
-    }else if(cursor_x==0){ //커서의 위치가 맨 앞에 위치할 때
+    }else if(cursor_x==0){ //head of
         char * buf = (char*)malloc(sizeof(char)*1);
         // write(STDOUT_FILENO, buf, strlen(buf));
         memmove(&row_info[cursor_y+cursor_y_out+1], &(row_info[cursor_y+cursor_y_out]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)));
@@ -1174,8 +1174,8 @@ void save_draw_msg_line(char * save_string, int len){
 
         printf("\033[%dH", terminal_row_size);
         printf("\033[K");
-        printf("file name : %s", save_string);
-        printf("\033[%d;%dH", terminal_row_size, len+13);
+        printf("file name(Enter to Save/ESC to Cancel) : %s", save_string);
+        printf("\033[%d;%dH", terminal_row_size, len+42);
         printf("\033[K");
     #else
         char save_msgbar[300];
@@ -1186,10 +1186,10 @@ void save_draw_msg_line(char * save_string, int len){
         write(STDOUT_FILENO, relocation, strlen(relocation));
         write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
 
-        sprintf(save_msgbar,"file name : %s",save_string);
+        sprintf(save_msgbar,"file name(Enter to Save/ESC to Cancel) : %s",save_string);
         write(STDOUT_FILENO, save_msgbar, strlen(save_msgbar));
 
-        sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+13);
+        sprintf(relocation,"\033[%d;%dH", terminal_row_size, len+42);
         write(STDOUT_FILENO, relocation, strlen(relocation));
         write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
     #endif
@@ -1212,7 +1212,7 @@ void save_file(void){
                 if(save_string!=NULL){
                     filename = save_string;
                     save_file();
-                    input_file_line();
+                    // input_file_line();
                     quit_status=0;
                     break;
                 }
@@ -1244,6 +1244,7 @@ void save_file(void){
             row_info[line].row = realloc(row_info[line].row, row_info[line].len+1);
             row_info[line].row[row_info[line].len-1] = '\n';
             fputs(row_info[line].row, fp);
+            row_info[line].row[row_info[line].len-1] = '\0';
         }
         quit_status=0;
 
@@ -1907,4 +1908,3 @@ int main(int argc, char *argv[]){
     
     return 0;
 
-}
