@@ -707,6 +707,7 @@ void page_up_draw_line(){
 
 
 void move_cursor(int keypress, char * filename){
+
     #ifdef _WIN32
         if(keypress == UP_ARROW){
             if(cursor_y > 0){
@@ -760,6 +761,7 @@ void move_cursor(int keypress, char * filename){
             }else{
                 if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
                 cursor_x++;
+                }
             }
         }
         if(keypress == HOME){
@@ -905,7 +907,6 @@ void move_cursor(int keypress, char * filename){
         sprintf(cursor_location,"\033[%d;%dH", cursor_y+1, cursor_x+1);
         write(STDOUT_FILENO, cursor_location, strlen(cursor_location));
     #endif
-    
 }
 
 
