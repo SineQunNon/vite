@@ -1,4 +1,4 @@
-#ifdef _WIN3
+#ifdef _WIN32
     #include <stdio.h>
     #include <stdlib.h>
     #include <conio.h>
@@ -763,6 +763,7 @@ void move_cursor(int keypress, char * filename){
             }
         }
         if(keypress == HOME){
+            printf("into");
             cursor_x = 0;
         }
         if(keypress == END){
@@ -906,7 +907,7 @@ void move_cursor(int keypress, char * filename){
     #endif
     
 }
-
+}
 
 /* Screen updates when input something */
 void input_file_line(void){
@@ -1640,7 +1641,7 @@ void shortcut_key(void){
         
         c = getch();
         
-        //printf("%d", c);
+        printf("%d", c);
         switch(c){
             case 224:
                 d = getch();      
@@ -1908,3 +1909,4 @@ int main(int argc, char *argv[]){
     
     return 0;
 
+}
