@@ -707,8 +707,7 @@ void page_up_draw_line(){
 
 
 void move_cursor(int keypress, char * filename){
-
-    #ifdef _WIN32
+        #ifdef _WIN32
         if(keypress == UP_ARROW){
             if(cursor_y > 0){
                 cursor_y--;
@@ -765,7 +764,6 @@ void move_cursor(int keypress, char * filename){
             }
         }
         if(keypress == HOME){
-            printf("into");
             cursor_x = 0;
         }
         if(keypress == END){
@@ -908,6 +906,7 @@ void move_cursor(int keypress, char * filename){
         write(STDOUT_FILENO, cursor_location, strlen(cursor_location));
     #endif
 }
+
 
 
 /* Screen updates when input something */
@@ -1642,7 +1641,6 @@ void shortcut_key(void){
         
         c = getch();
         
-        printf("%d", c);
         switch(c){
             case 224:
                 d = getch();      
