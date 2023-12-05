@@ -302,18 +302,17 @@ void draw_file_line(void){ // 0 ~
     #ifdef _WIN32
         for (int terminal_line = 0; terminal_line < terminal_row_size; ++terminal_line) {
             if (terminal_line == terminal_row_size - 2 || terminal_line == terminal_row_size - 1) {
-                //draw_msg_line(terminal_line);
-            } else if (terminal_line > file_row_length) {
-                if (terminal_line < terminal_row_size - 1) {
+                draw_msg_line(terminal_line);
+            }else if(terminal_line > file_row_length){
+                if (terminal_line < terminal_row_size - 1) {                    
                     printf("~\n");
                 } else {
                     printf("~");
                 }
-            } else {
+            }else {
                 if (row_info[terminal_line].len > terminal_col_size) {
                     row_info[terminal_line].len = terminal_col_size;
                 }
-
                 printf("%s", row_info[terminal_line].row); 
                 if(terminal_line < terminal_row_size - 2){
                     printf("\n");
@@ -729,6 +728,7 @@ void move_cursor(int keypress, char * filename){
         if(keypress == DOWN_ARROW){
             //0 ~ 18
             if(cursor_y + cursor_y_out != file_row_length-1){
+                
                 // char buf[30];
                 // sprintf(buf, "into");
                 // write(STDOUT_FILENO, buf, strlen(buf));
@@ -759,11 +759,11 @@ void move_cursor(int keypress, char * filename){
         if(keypress == RIGHT_ARROW){
             if(filename != NULL){
                 if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
-                cursor_x++;
+                    cursor_x++;
                 }
             }else{
                 if(cursor_x < row_info[cursor_y+cursor_y_out].len -1){
-                cursor_x++;
+                    cursor_x++;
                 }
             }
         }
@@ -792,7 +792,9 @@ void move_cursor(int keypress, char * filename){
         }
             
         if(keypress == PAGE_DOWN){
-            if(cursor_y != terminal_row_size - 3){
+            if(file_row_length < terminal_row_size - 2){
+                cursor_y = file_row_length - 1;
+            }else if(cursor_y != terminal_row_size - 3){
                 cursor_y = terminal_row_size -3;
             }else{
                 cursor_y_out += terminal_row_size-2;
@@ -1792,7 +1794,7 @@ int main(int argc, char *argv[]){
         DWORD mode;
 
 
-        mode &= ~ENABLE_ECHO_INPUT;
+        //mode &= ~ENABLE_ECHO_INPUT;
 
         if (!GetConsoleScreenBufferInfo(hConsole, &csbiInfo)) {
             fprintf(stderr, "Failed to get console screen buffer info. Error code: %lu\n", GetLastError());
@@ -1808,8 +1810,6 @@ int main(int argc, char *argv[]){
 
             open_file(argv[1]);
             draw_file_line();
-            draw_msg_line(terminal_row_size-2);
-            draw_msg_line(terminal_row_size-1);
             printf("\033[%d;%dH", cursor_y, cursor_x);
 
             while(1){
@@ -1819,7 +1819,7 @@ int main(int argc, char *argv[]){
                 up_update_file_line();
                 shortcut_key();
 
-                printf("\033[%d;%dH", terminal_row_size-1, 0);
+                printf("\033[%d;%dH", terminal_row_size-2, 0);
                 draw_msg_line(terminal_row_size-2);
                 printf("\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             }
@@ -1831,7 +1831,7 @@ int main(int argc, char *argv[]){
             open_new_terminal();
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
             file_row_length++;
-            row_info[0].row = NULL;
+            row_info[0].row = (char *)malloc(sizeof(char));
             row_info[0].len = 0;
             draw_msg_line(terminal_row_size-2);
             draw_msg_line(terminal_row_size-1);
@@ -1839,7 +1839,7 @@ int main(int argc, char *argv[]){
             while(1){
                 shortcut_key();
 
-                printf("\033[%d;%dH", terminal_row_size-1, 0);
+                printf("\033[%d;%dH", terminal_row_size-2, 0);
                 draw_msg_line(terminal_row_size-2);
                 printf("\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             }
