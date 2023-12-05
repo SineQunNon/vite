@@ -512,12 +512,14 @@ void open_file(const char * filename){
         
         while ((read = getline(&line, &len, fp)) != -1) {
             // Change tabs to 4 spaces and store in row_info
+            if(read > 0 && line[read-1]=='\r'||line[read-1]=='\n') read--;
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info) * (file_row_length + 1));
             row_info[file_row_length].row = initialize_row(line, read);
-            row_info[file_row_length].len = strlen(row_info[file_row_length].row);
+            row_info[file_row_length].len = strlen(row_info[file_row_length].row) + 1;
             row_info[file_row_length].row[row_info[file_row_length].len-1]='\0';
             file_row_length++;
         }
+        // file_row_length--;
 
         fclose(fp);
     #else
@@ -535,11 +537,12 @@ void open_file(const char * filename){
         while((read = getline(&line, &len, fp)) != -1){
             /* Change tabs to 4 spaces*/
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+
+            if(read > 0 && line[read-1]=='\r'||line[read-1]=='\n') read--;
             char * modified_line = tabs_to_spaces(line, read);
             
-
             row_info[file_row_length].row = modified_line;
-            row_info[file_row_length].len = strlen(modified_line);
+            row_info[file_row_length].len = strlen(modified_line) + 1;
             row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
             // row_info[file_row_length].row[row_info[file_row_length].len+1] = '\r';
             // row_info[file_row_length]->len = strlen(line);
@@ -551,7 +554,7 @@ void open_file(const char * filename){
             // write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
             file_row_length++;
         }
-
+        // file_row_length--;
         // for(int i=0; i<5; ++i){
         //     char buf[50];
         //     sprintf(buf, "%d line : %d\r\n", i+1, file_col_length[i]);
@@ -885,7 +888,10 @@ void move_cursor(int keypress, char * filename){
         }
             
         if(keypress == PAGE_DOWN){
-            if(cursor_y != terminal_row_size - 3){
+            if(file_row_length < terminal_row_size - 2){
+                cursor_y = file_row_length - 1;
+            }
+            else if(cursor_y != terminal_row_size - 3){
                 cursor_y = terminal_row_size -3;
             }else{
                 // char buf[30];
@@ -1894,8 +1900,8 @@ int main(int argc, char *argv[]){
         open_new_terminal();
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
         file_row_length++;
-        row_info[0].row = NULL;
-        row_info[0].len = 0;
+        row_info[0].row = (char *)malloc(sizeof(char));
+        row_info[0].len = 1;
 
         while(1){
             shortcut_key();
