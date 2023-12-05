@@ -35,7 +35,6 @@
     #define END 6666
     #define PAGE_UP 7777
     #define PAGE_DOWN 8888
-    #define BACK_SPACE 127
     #define ESC 27
     #define CLEAR "clear"
     struct termios orig_termios; //terminal setting
@@ -44,8 +43,10 @@
 
 #ifdef __APPLE__
     #define ENTER '\r'
+    #define BACK_SPACE 127
 #elif __linux__
     #define ENTER 13
+    #define BACK_SPACE 8
 #endif
 
 int cursor_x; //location of terminal x-coordinate
@@ -1123,10 +1124,10 @@ void draw_character_newfile(int c){
     #else
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
-        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-        row_info[cursor_y+cursor_y_out].len +=1;
+        row_info[cursor_y+cursor_y_out].len +=2;
         input_file_line();
         cursor_x++;
     #endif
@@ -1703,7 +1704,7 @@ void shortcut_key(void){
                break;
         }
     #else
-         int c;
+        int c;
         c = read_keypress();
 
         switch(c){
@@ -1736,7 +1737,6 @@ void shortcut_key(void){
                     write(STDOUT_FILENO, quit_msgbar, strlen(quit_msgbar));
                     quit_status++;
                 }
-
                 
             case UP_ARROW:
             case DOWN_ARROW:
