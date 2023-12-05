@@ -1123,10 +1123,10 @@ void draw_character_newfile(int c){
     #else
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
-        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-        row_info[cursor_y+cursor_y_out].len +=2;
+        row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
         cursor_x++;
     #endif
@@ -1491,7 +1491,6 @@ int while_search_read_keypress(void){
 
 /*process Ctrl-f*/
 void search_process(void){
-
     #ifdef _WIN32
         input_file_line();
         char *search_string=NULL;
@@ -1516,33 +1515,37 @@ void search_process(void){
                         location[size-1].col_location = KMP(row_info[i].row , search_string, row_info[i].len, len);
                     }
                 }
-                int search=0;
-                while_search_draw_line(location[0].row_location, location[0].col_location);
+                if(size ==0){
 
-                while(1){
-                    int key = while_search_read_keypress();
-                    if(key==DOWN_ARROW || key==RIGHT_ARROW){
-                        if(search == size-1){
-                            search=0;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
+                }else{
+                    int search=0;
+                    while_search_draw_line(location[0].row_location, location[0].col_location);
+
+                    while(1){
+                        int key = while_search_read_keypress();
+                        if(key==DOWN_ARROW || key==RIGHT_ARROW){
+                            if(search == size-1){
+                                search=0;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }else{
+                                search++;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }
+                        }else if(key==UP_ARROW || key==LEFT_ARROW){
+                            if(search==0){
+                                search = size-1;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }else{
+                                search--;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }
                         }else{
-                            search++;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
+                            break;
                         }
-                    }else if(key==UP_ARROW || key==LEFT_ARROW){
-                        if(search==0){
-                            search = size-1;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
-                        }else{
-                            search--;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
-                        }
-                    }else{
-                        break;
                     }
+                    free(location);
                 }
-                free(location);
-
+                
             }else if(c==BACK_SPACE){
                 if(len > 0){
                     // write(STDOUT_FILENO, "bs", strlen("bs"));
@@ -1585,33 +1588,35 @@ void search_process(void){
                         location[size-1].col_location = KMP(row_info[i].row , search_string, row_info[i].len, len);
                     }
                 }
-                int search=0;
-                while_search_draw_line(location[0].row_location, location[0].col_location);
-
-                while(1){
-                    int key = while_search_read_keypress();
-                    if(key==DOWN_ARROW || key==RIGHT_ARROW){
-                        if(search == size-1){
-                            search=0;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
+                if(size == 0){
+                    
+                }else{
+                    int search=0;
+                    while_search_draw_line(location[0].row_location, location[0].col_location);
+                    while(1){
+                        int key = while_search_read_keypress();
+                        if(key==DOWN_ARROW || key==RIGHT_ARROW){
+                            if(search == size-1){
+                                search=0;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }else{
+                                search++;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }
+                        }else if(key==UP_ARROW || key==LEFT_ARROW){
+                            if(search==0){
+                                search = size-1;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }else{
+                                search--;
+                                while_search_draw_line(location[search].row_location, location[search].col_location);
+                            }
                         }else{
-                            search++;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
+                            break;
                         }
-                    }else if(key==UP_ARROW || key==LEFT_ARROW){
-                        if(search==0){
-                            search = size-1;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
-                        }else{
-                            search--;
-                            while_search_draw_line(location[search].row_location, location[search].col_location);
-                        }
-                    }else{
-                        break;
                     }
                 }
-                free(location);
-
+                    free(location);
             }else if(c==BACK_SPACE){
                 if(len > 0){
                     // write(STDOUT_FILENO, "bs", strlen("bs"));
@@ -1904,8 +1909,9 @@ int main(int argc, char *argv[]){
             write(STDOUT_FILENO, buf, strlen(buf));
         }   
     }
-    #endif
+    #endif 
     
     return 0;
-
 }
+
+
