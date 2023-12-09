@@ -1060,11 +1060,7 @@ void backspace_process(void){
     }
 #endif
 
-char* new_line(void){
-    char * new_line  = (char*)malloc(sizeof(char) * 1);
 
-    return new_line;
-}
 
 /* Enter key process */
 void enter_process(void){
@@ -1074,8 +1070,9 @@ void enter_process(void){
             
             char buf2[100];
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
-            char * new_line  = (char*)malloc(sizeof(char) * 1);
-            new_line[0] = '\0';
+            char * new_line  = (char*)malloc(sizeof(char) * 2);
+            new_line[0] = ' ';
+            new_line[1] = '\0';
             row_info[cursor_y+cursor_y_out+1].row = new_line;
             row_info[cursor_y+cursor_y_out+1].len = 1;
             //sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, strlen(row_info[cursor_y+cursor_y_out+1].row));
