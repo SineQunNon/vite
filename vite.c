@@ -1072,8 +1072,10 @@ void enter_process(void){
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             row_info[cursor_y+cursor_y_out+1].row = buf;
             row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
+            printf("new line : %s", buf);
+            printf("size : %d", strlen(buf));
             file_row_length++;
-            input_file_line();
+            //input_file_line();
             
             cursor_x = 0;
             cursor_y++;
