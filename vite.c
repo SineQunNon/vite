@@ -1077,6 +1077,8 @@ void enter_process(void){
             char * new_line  = (char*)malloc(sizeof(char) * 2);
             //row_info[cursor_y+cursor_y_out+1].row = new_line();
             //row_info[cursor_y+cursor_y_out+1].row = realloc(row_info[cursor_y+cursor_y_out+1].row, sizeof(char));
+            new_line[0] = ' ';
+            new_line[1] = '\0';
             row_info[cursor_y+cursor_y_out+1].len = 1;
             sprintf(buf2, "row : %s , size : %ld", new_line, strlen(new_line));
             write(STDOUT_FILENO, buf2, strlen(buf2));
