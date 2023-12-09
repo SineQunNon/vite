@@ -1061,9 +1061,8 @@ void backspace_process(void){
 #endif
 
 char* new_line(void){
-    char * new_line  =(char*)malloc(sizeof(char));
+    char * new_line  = malloc(sizeof(char));
 
-    new_line[0] = ' ';
     return new_line;
 }
 
