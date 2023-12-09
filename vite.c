@@ -455,7 +455,6 @@ void up_update_file_line(){
 }
 
 char* tabs_to_spaces(char * line, int length){
-    
     char * modified_line = malloc(length * 4);
 
     int pos = 0;
@@ -473,8 +472,8 @@ char* tabs_to_spaces(char * line, int length){
     return modified_line;
 }
 
-#ifdef _WIN32
-    char* initialize_row(char *line, int read) {
+
+char* initialize_row(char *line, int read) {
     char *new_line = malloc(sizeof(char) * (read + 1)); // Allocate enough space
 
     int pos = 0;
@@ -493,10 +492,9 @@ char* tabs_to_spaces(char * line, int length){
 
     return new_line;
 }
-#endif
+
 
 void open_file(const char * filename){
-    
     #ifdef _WIN32
         char * line = NULL;
         size_t len = 0;
@@ -521,7 +519,7 @@ void open_file(const char * filename){
         // file_row_length--;
 
         fclose(fp);
-    #else
+    #elif __APPLE__
         char * line = NULL;
         size_t len = 0;
         ssize_t read;
@@ -539,6 +537,46 @@ void open_file(const char * filename){
 
             if(read > 0 && line[read-1]=='\r'||line[read-1]=='\n') read--;
             char * modified_line = tabs_to_spaces(line, read);
+            
+            row_info[file_row_length].row = modified_line;
+            row_info[file_row_length].len = strlen(modified_line) + 1;
+            row_info[file_row_length].row[row_info[file_row_length].len-1] = '\0';
+            // row_info[file_row_length].row[row_info[file_row_length].len+1] = '\r';
+            // row_info[file_row_length]->len = strlen(line);
+            // char * p;
+            // sprintf(p, "read : %d || len : %d ", read, len);
+            // write(STDOUT_FILENO, p, strlen(p));
+            // write(STDOUT_FILENO, line, read);
+            // write(STDOUT_FILENO, "\r", 2);
+            // write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
+            file_row_length++;
+        }
+        // file_row_length--;
+        // for(int i=0; i<5; ++i){
+        //     char buf[50];
+        //     sprintf(buf, "%d line : %d\r\n", i+1, file_col_length[i]);
+        //     write(STDOUT_FILENO, buf, strlen(buf));
+        // }
+        
+        fclose(fp);
+    #else
+        char * line = NULL;
+        size_t len = 0;
+        ssize_t read;
+        FILE * fp = fopen(filename, "rt");
+        if(fp == NULL){
+            perror("error : failed to open file");
+            exit(1);
+        }
+
+        file_row_length=0;
+        
+        while((read = getline(&line, &len, fp)) != -1){
+            /* Change tabs to 4 spaces*/
+            row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+
+            if(read > 0 && line[read-1]=='\r'||line[read-1]=='\n') read--;
+            char * modified_line = initialize_row(line, read);
             
             row_info[file_row_length].row = modified_line;
             row_info[file_row_length].len = strlen(modified_line) + 1;
