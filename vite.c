@@ -46,7 +46,7 @@
     #define BACK_SPACE 127
 #elif __linux__
     #define ENTER 13
-    #define BACK_SPACE 8
+    #define BACK_SPACE 127
 #endif
 
 int cursor_x; //location of terminal x-coordinate
