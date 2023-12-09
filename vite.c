@@ -1068,12 +1068,13 @@ void enter_process(void){
             row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
 
             char * buf = (char*)malloc(sizeof(char)*1);
+            char buf2[100];
             buf[0] = ' ';
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             row_info[cursor_y+cursor_y_out+1].row = buf;
             row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
-            printf("new line : %s", buf);
-            printf("size : %d", strlen(buf));
+            sprintf(buf2, "buf : %s size : %ld", buf, strlen(buf));
+            wriet(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
             //input_file_line();
             
