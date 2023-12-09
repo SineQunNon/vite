@@ -1072,7 +1072,7 @@ void enter_process(void){
             char buf2[100];
             
             if(cursor_y + cursor_y_out == file_row_length -1){
-                
+
             }else{
                 memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             }
@@ -2022,6 +2022,7 @@ int main(int argc, char *argv[]){
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
         file_row_length++;
         row_info[0].row = (char *)malloc(sizeof(char));
+        row_info[0].row[0] = '\0';
         row_info[0].len = 1;
 
         while(1){
