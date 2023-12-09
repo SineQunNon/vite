@@ -1068,6 +1068,7 @@ void enter_process(void){
             row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
 
             char * buf = (char*)malloc(sizeof(char)*1);
+            buf[0] = ' ';
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             row_info[cursor_y+cursor_y_out+1].row = buf;
             row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
