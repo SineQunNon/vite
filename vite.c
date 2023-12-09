@@ -1063,7 +1063,7 @@ void backspace_process(void){
 char* new_line(void){
     char * new_line  = malloc(sizeof(char));
 
-    char * new_line = realloc(new_line, 1);
+    new_line = realloc(new_line, 1);
 
     return new_line;
 }
