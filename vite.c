@@ -1159,7 +1159,6 @@ void enter_process(void){
             //     write(STDOUT_FILENO, buf2, strlen(buf2));
             // }
             cursor_x = 0;
-            cursor_y++;
         }else if(cursor_x==0){ //head of
             char * buf = (char*)malloc(sizeof(char)*1);
             buf[0] = ' ';
@@ -1176,7 +1175,6 @@ void enter_process(void){
             //     write(STDOUT_FILENO, buf2, strlen(buf2));
             // }
             cursor_x = 0;
-            cursor_y++;
         }else if(cursor_x!=0 && cursor_x!=row_info[cursor_y+cursor_y_out].len-1){ //in the middle of line
             // char buf2[30];
             // sprintf(buf2, "into");
@@ -1211,6 +1209,11 @@ void enter_process(void){
             file_row_length++;
             input_file_line();
             cursor_x = 0;
+        }
+
+        if(cursor_y == terminal_row_size - 3){
+            cursor_y_out++;
+        }else if(cursor_y < terminal_row_size -3){
             cursor_y++;
         }
     #endif
