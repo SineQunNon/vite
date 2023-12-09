@@ -1088,10 +1088,11 @@ void enter_process(void){
         }else if(cursor_x==0){ //head of
             char * buf = (char*)malloc(sizeof(char)*1);
             buf[0] = '\0';
+
             // write(STDOUT_FILENO, buf, strlen(buf));
             memmove(&row_info[cursor_y+cursor_y_out+1], &(row_info[cursor_y+cursor_y_out]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)));
             row_info[cursor_y+cursor_y_out].row = buf;
-            row_info[cursor_y+cursor_y_out].len = strlen(buf);
+            row_info[cursor_y+cursor_y_out].len = 1;
             file_row_length++;
             input_file_line();
             // for(int i =0; i < 20; ++i){
@@ -1102,17 +1103,12 @@ void enter_process(void){
             cursor_x = 0;
             cursor_y++;
         }else if(cursor_x!=0 && cursor_x!=row_info[cursor_y+cursor_y_out].len-1){ //in the middle of line
-            // char buf2[30];
-            // sprintf(buf2, "into");
-            // write(STDOUT_FILENO, buf2, strlen(buf2));
             char split_sentence[500];
             char * replace_line=NULL; //restoring the string before enter
-            char * buf=NULL;
-
             memcpy(split_sentence,&(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - cursor_x);
             // write(STDOUT_FILENO, split_sentence, strlen(split_sentence));
 
-            buf = (char*)realloc(buf, sizeof(char)*(row_info[cursor_y+cursor_y_out].len - cursor_x + 1));
+            char * buf = (char*)realloc(buf, sizeof(char)*(row_info[cursor_y+cursor_y_out].len - cursor_x + 1));
             replace_line = (char*)realloc(replace_line, sizeof(char) * (cursor_x +1));
             memcpy(buf, split_sentence, row_info[cursor_y+cursor_y_out].len - cursor_x);
             // write(STDOUT_FILENO, buf, strlen(buf));
