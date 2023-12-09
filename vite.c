@@ -1060,6 +1060,13 @@ void backspace_process(void){
     }
 #endif
 
+char* new_line(void){
+    char * new_line  =(char*)malloc(sizeof(char));
+
+    new_line[0] = ' ';
+    return new_line;
+}
+
 /* Enter key process */
 void enter_process(void){
     #ifdef __linux__
@@ -1067,12 +1074,12 @@ void enter_process(void){
          if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){//tail
             row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
 
-            char * buf = (char*)malloc(1);
+            char * buf = new_line();
             char buf2[100];
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             row_info[cursor_y+cursor_y_out+1].row = buf;
             row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
-            sprintf(buf2, "buf : %s row : %s , size : %ld, row size : %ld", buf, row_info[cursor_y+cursor_y_out+1].row, strlen(buf));
+            sprintf(buf2, "buf : %s row : %s , size : %ld", buf, row_info[cursor_y+cursor_y_out+1].row, strlen(buf));
             write(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
             //input_file_line();
