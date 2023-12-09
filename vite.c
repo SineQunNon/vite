@@ -1781,6 +1781,7 @@ void shortcut_key(void){
         int d;
         // c = read_keypress();
         
+        
         c = getch();
         
         switch(c){
@@ -1952,7 +1953,7 @@ int main(int argc, char *argv[]){
                 printf("\x1B[0m\033[%d;%dH", cursor_y+1, cursor_x+1);
             }
             
-            //printf("%d", file_row_length);
+            //printf("%d", file_row_length); 
 
            free(row_info);
         }else{
@@ -1960,7 +1961,8 @@ int main(int argc, char *argv[]){
             row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
             file_row_length++;
             row_info[0].row = (char *)malloc(sizeof(char));
-            row_info[0].len = 0;
+            row_info[0].row[0] = '\0';
+            row_info[0].len = 1;
             draw_msg_line(terminal_row_size-2);
             draw_msg_line(terminal_row_size-1);
             printf("\033[%d;%dH", 1, 1);
