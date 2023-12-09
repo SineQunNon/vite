@@ -569,7 +569,6 @@ void open_file(const char * filename){
 
 int read_keypress(void){
     #ifdef _WIN32
-        char buf[4];
 
     #else
         char buf[4];
@@ -1921,3 +1920,5 @@ int main(int argc, char *argv[]){
 }
 
 
+
+ 
