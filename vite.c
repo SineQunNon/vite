@@ -1735,7 +1735,8 @@ void shortcut_key(void){
                 quit_status=1;
                 break;
             case ENTER:
-                enter_process();
+                printf("into");
+                //enter_process();
                 quit_status=1;
                 break;
             default:
