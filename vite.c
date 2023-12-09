@@ -1081,7 +1081,7 @@ void enter_process(void){
             sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, strlen(row_info[cursor_y+cursor_y_out+1].row));
             write(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
-            //input_file_line();
+            input_file_line();
             
             cursor_x = 0;
             cursor_y++;
