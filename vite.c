@@ -1071,7 +1071,11 @@ void enter_process(void){
             
             char buf2[100];
             
-            memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            if(cursor_y + cursor_y_out == file_row_length -1){
+                
+            }else{
+                memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            }
             
             char * new_line  = (char*)malloc(sizeof(char) * 2);
             new_line[0] = ' ';
