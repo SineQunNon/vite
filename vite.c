@@ -1372,10 +1372,17 @@ void save_file(void){
         }
 
         for(int line=0; line<file_row_length; ++line){
-            row_info[line].row = realloc(row_info[line].row, row_info[line].len+1);
-            row_info[line].row[row_info[line].len-1] = '\n';
-            fputs(row_info[line].row, fp);
-            row_info[line].row[row_info[line].len-1] = '\0';
+            #ifdef __linux__
+                row_info[line].row[row_info[line].len-1] = '\n';
+                fputs(row_info[line].row, fp);
+                row_info[line].row[row_info[line].len-1] = '\0';
+            #else
+                row_info[line].row = realloc(row_info[line].row, row_info[line].len+1);
+                row_info[line].row[row_info[line].len-1] = '\n';
+                fputs(row_info[line].row, fp);
+                row_info[line].row[row_info[line].len-1] = '\0';
+            #endif
+           
         }
         quit_status=0;
 
