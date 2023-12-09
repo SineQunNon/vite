@@ -1078,7 +1078,7 @@ void enter_process(void){
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             row_info[cursor_y+cursor_y_out+1].row = new_line();
             row_info[cursor_y+cursor_y_out+1].len = 1;
-            sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, row_info[cursor_y+cursor_y_out+1].len);
+            sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, strlen(row_info[cursor_y+cursor_y_out+1].row));
             write(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
             //input_file_line();
