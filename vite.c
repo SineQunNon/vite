@@ -1086,8 +1086,9 @@ void enter_process(void){
             cursor_x = 0;
             cursor_y++;
         }else if(cursor_x==0){ //head of
-            char * buf = (char*)malloc(sizeof(char)*1);
-            buf[0] = '\0';
+            char * buf = (char*)malloc(sizeof(char)*2);
+            buf[0] = ' ';
+            buf[1] = '\0';
 
             // write(STDOUT_FILENO, buf, strlen(buf));
             memmove(&row_info[cursor_y+cursor_y_out+1], &(row_info[cursor_y+cursor_y_out]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)));
