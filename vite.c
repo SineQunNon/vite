@@ -1077,7 +1077,7 @@ void enter_process(void){
             row_info[cursor_y+cursor_y_out+1].row = new_line();
             row_info[cursor_y+cursor_y_out+1].row = realloc(row_info[cursor_y+cursor_y_out+1].row, sizeof(char));
             row_info[cursor_y+cursor_y_out+1].len = 1;
-            sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, sizeof(char)));
+            sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, sizeof(char));
             write(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
             //input_file_line();
