@@ -1735,8 +1735,7 @@ void shortcut_key(void){
                 quit_status=1;
                 break;
             case ENTER:
-                printf("into");
-                //enter_process();
+                enter_process();
                 quit_status=1;
                 break;
             default:
@@ -1805,7 +1804,8 @@ void shortcut_key(void){
                 quit_status=1;
                 break;
             case ENTER:
-                enter_process();
+                printf("int");
+                //enter_process();
                 quit_status=1;
                 break;
             
