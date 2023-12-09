@@ -1070,7 +1070,9 @@ void enter_process(void){
             row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
             
             char buf2[100];
-            memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            if(cursor_x + cursor_y_out != file_row_length-1){
+                memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            }
             char * new_line  = (char*)malloc(sizeof(char) * 2);
             new_line[0] = ' ';
             new_line[1] = '\0';
