@@ -1063,8 +1063,6 @@ void backspace_process(void){
 char* new_line(void){
     char * new_line  = malloc(sizeof(char));
 
-    new_line = realloc(new_line, 1);
-
     return new_line;
 }
 
@@ -1075,12 +1073,12 @@ void enter_process(void){
          if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){//tail
             row_info = realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
 
-            char * buf = new_line();
+            
             char buf2[100];
             memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
-            row_info[cursor_y+cursor_y_out+1].row = buf;
-            row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
-            sprintf(buf2, "buf : %s row : %s , size : %ld", buf, row_info[cursor_y+cursor_y_out+1].row, strlen(buf));
+            row_info[cursor_y+cursor_y_out+1].row = new_line();
+            row_info[cursor_y+cursor_y_out+1].len = 1;
+            sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, row_info[cursor_y+cursor_y_out+1].len);
             write(STDOUT_FILENO, buf2, strlen(buf2));
             file_row_length++;
             //input_file_line();
