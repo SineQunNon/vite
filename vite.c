@@ -2029,7 +2029,7 @@ int main(int argc, char *argv[]){
         open_new_terminal();
         row_info = (file_row_info *)malloc(sizeof(file_row_info)*(file_row_length+1));
         file_row_length++;
-        row_info[0].row = (char *)malloc(sizeof(char)*100);
+        row_info[0].row = (char *)malloc(sizeof(char));
         row_info[0].row[0] = '\0';
         row_info[0].len = 1;
 
