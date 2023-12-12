@@ -1067,26 +1067,20 @@ void backspace_process(void){
 void enter_process(void){
     #ifdef __linux__
         if(cursor_x == row_info[cursor_y+cursor_y_out].len-1){//tail
-            row_info = (file_row_info*)realloc(row_info, sizeof(file_row_info)*(file_row_length + 1));
-            
-            char buf2[100];
-            
-            if(cursor_y + cursor_y_out == file_row_length){
-                
-            }else{
-                memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
-            }
-            
-            char * new_line  = (char*)malloc(sizeof(char) * 2);
-            new_line[0] = ' ';
-            new_line[1] = '\0';
-            row_info[cursor_y+cursor_y_out+1].row = new_line;
-            row_info[cursor_y+cursor_y_out+1].len = 1;
-            //sprintf(buf2, "row : %s , size : %ld", row_info[cursor_y+cursor_y_out+1].row, strlen(row_info[cursor_y+cursor_y_out+1].row));
-            //write(STDOUT_FILENO, buf2, strlen(buf2));
+            char * buf = (char*)malloc(sizeof(char)*2);
+            buf[0] = ' ';
+            buf[1] = '\0';
+            // write(STDOUT_FILENO, buf, strlen(buf));
+            memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            row_info[cursor_y+cursor_y_out+1].row = buf;
+            row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
             file_row_length++;
             input_file_line();
-            
+            // for(int i =0; i < 20; ++i){
+            //     char buf2[30];
+            //     sprintf(buf2, "%d : %s\r\n", i+1,row_info[i].row);
+            //     write(STDOUT_FILENO, buf2, strlen(buf2));
+            // }
             cursor_x = 0;
         }else if(cursor_x==0){ //head of
             char * buf = (char*)malloc(sizeof(char)*2);
