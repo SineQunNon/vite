@@ -1249,10 +1249,26 @@ void draw_character_newfile(int c){
         row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
         cursor_x++;
-    #else
+    #elif __APPLE__
         // row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
         row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+2));
-        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len + 1);
+        row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
+        row_info[cursor_y+cursor_y_out].len +=1;
+        input_file_line();
+        cursor_x++;
+    #else
+        char *new_row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len + 1);
+        if (new_row == NULL) {
+            // 메모리 할당 오류 처리
+            perror("Failed to allocate memory");
+            exit(1);
+        }
+        row_info[cursor_y+cursor_y_out].row = new_row;
+         // row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+2));
+        // memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len + 1);
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len - cursor_x);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
         row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
