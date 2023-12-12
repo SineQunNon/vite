@@ -1071,7 +1071,9 @@ void enter_process(void){
             buf[0] = ' ';
             buf[1] = '\0';
             // write(STDOUT_FILENO, buf, strlen(buf));
-            memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            if(cursor_y + cursor_y_out != file_row_length - 1){
+                memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
+            }
             row_info[cursor_y+cursor_y_out+1].row = buf;
             row_info[cursor_y+cursor_y_out+1].len = strlen(buf);
             file_row_length++;
@@ -1259,11 +1261,7 @@ void draw_character_newfile(int c){
         cursor_x++;
     #else
         char *new_row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len + 1);
-        if (new_row == NULL) {
-            // 메모리 할당 오류 처리
-            perror("Failed to allocate memory");
-            exit(1);
-        }
+        
         row_info[cursor_y+cursor_y_out].row = new_row;
          // row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
         row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+2));
