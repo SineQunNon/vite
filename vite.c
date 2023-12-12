@@ -1249,7 +1249,7 @@ void draw_character_newfile(int c){
     #ifdef _WIN32
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+1));
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
         row_info[cursor_y+cursor_y_out].len +=1;
@@ -1258,10 +1258,10 @@ void draw_character_newfile(int c){
     #else
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
 
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+2);
-        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +2);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+1));
+        memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
-        row_info[cursor_y+cursor_y_out].len +=2;
+        row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
         cursor_x++;
     #endif
