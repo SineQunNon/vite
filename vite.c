@@ -1864,6 +1864,7 @@ void shortcut_key(void){
                     //     write(STDOUT_FILENO, "\033[K", strlen("\033[K"));
                     // }
                     // write(STDOUT_FILENO, "\033[H", strlen("\033[H"));
+                    free(row_info);
                     exit(0);
                 }else if(quit_status == 1){
                     //print message bar
@@ -2033,7 +2034,7 @@ int main(int argc, char *argv[]){
         }
     }else{
         open_new_terminal();
-        row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
+        row_info = (file_row_info *)malloc(sizeof(file_row_info)*(file_row_length+1));
         file_row_length++;
         row_info[0].row = (char *)malloc(sizeof(char));
         row_info[0].row[0] = '\0';
