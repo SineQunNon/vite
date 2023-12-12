@@ -1072,7 +1072,7 @@ void enter_process(void){
             char buf2[100];
             
             if(cursor_y + cursor_y_out == file_row_length -1){
-
+                
             }else{
                 memmove(&row_info[cursor_y+cursor_y_out+2], &(row_info[cursor_y+cursor_y_out+1]), sizeof(file_row_info) *  (file_row_length - (cursor_y+cursor_y_out)-1));
             }
@@ -1227,14 +1227,14 @@ void enter_process(void){
 /*input character given arguments*/
 void draw_character(int c){
     #ifdef _WIN32
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+1));
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
         row_info[cursor_y+cursor_y_out].len +=1;
         input_file_line();
         cursor_x++;
     #else
-        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, row_info[cursor_y+cursor_y_out].len+1);
+        row_info[cursor_y+cursor_y_out].row = realloc(row_info[cursor_y+cursor_y_out].row, sizeof(char)*(row_info[cursor_y+cursor_y_out].len+1));
         memmove(&(row_info[cursor_y+cursor_y_out].row[cursor_x+1]), &(row_info[cursor_y+cursor_y_out].row[cursor_x]), row_info[cursor_y+cursor_y_out].len +1);
         row_info[cursor_y+cursor_y_out].row[cursor_x] = c;
         row_info[cursor_y+cursor_y_out].len +=1;
