@@ -2036,9 +2036,8 @@ int main(int argc, char *argv[]){
         row_info = (file_row_info *)realloc(row_info, sizeof(file_row_info)*(file_row_length+1));
         file_row_length++;
         row_info[0].row = (char *)malloc(sizeof(char));
-        row_info[0].row[0] = ' ';
-        row_info[0].row[1] = '\0';
-        row_info[0].len = 2;
+        row_info[0].row[0] = '\0';
+        row_info[0].len = 1;
 
         while(1){
             shortcut_key();
